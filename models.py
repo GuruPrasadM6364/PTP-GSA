@@ -138,3 +138,19 @@ class User(Base):
 
     def __repr__(self) -> str:
         return f"<User id={self.id} name='{self.name}' phone={self.phone} pincode={self.pincode}>"
+
+
+class Application(Base):
+    __tablename__ = "applications"
+    id: int = Column(Integer, primary_key=True)
+    name: str = Column(String(200), nullable=False)
+    phone: str = Column(String(10), nullable=False)
+    pincode: str = Column(String(6), nullable=False)
+    email: str = Column(String(200), nullable=False)
+    source: str = Column(String(50), nullable=False)  # Solar, Wind, Hydro
+    status: str = Column(String(50), nullable=False, default="submitted")
+    created_at: datetime = Column(DateTime, default=datetime.utcnow)
+    updated_at: datetime = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self) -> str:
+        return f"<Application id={self.id} name='{self.name}' source={self.source} status={self.status}>"

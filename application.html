@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Renewable Energy Application Form</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <style>
+    .form-container { max-width: 500px; margin: 2rem auto; padding: 2rem; background: #f1f8e9; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .form-container h1 { color: #2e7d32; text-align: center; margin-bottom: 1.5rem; }
+    .form-group { margin-bottom: 1.2rem; }
+    .form-group label { display: block; font-weight: bold; margin-bottom: 0.4rem; color: #333; }
+    .form-group input, .form-group select { width: 100%; padding: 0.6rem; border: 1px solid #cfd8dc; border-radius: 6px; font-size: 1rem; box-sizing: border-box; }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: #388e3c; box-shadow: 0 0 4px rgba(56, 142, 60, 0.3); }
+    .radio-group { margin: 0.5rem 0; }
+    .radio-group label { display: inline-flex; align-items: center; margin-right: 1.5rem; font-weight: normal; }
+    .radio-group input[type="radio"] { margin-right: 0.5rem; }
+    .button-group { display: flex; gap: 1rem; margin-top: 2rem; }
+    .button-group button { flex: 1; padding: 0.8rem; font-size: 1rem; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: background 0.2s; }
+    .btn-submit { background: #388e3c; color: white; }
+    .btn-submit:hover { background: #2e7d32; }
+    .btn-cancel { background: #ccc; color: #333; }
+    .btn-cancel:hover { background: #aaa; }
+    .error { color: #b00020; font-size: 0.9rem; margin-top: 0.3rem; }
+    .success { color: #007700; padding: 1rem; background: #e8f5e9; border-radius: 6px; margin-top: 1rem; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="form-container">
+    <h1>Renewable Energy Application Form</h1>
+    <form id="appForm">
+      <div class="form-group">
+        <label for="name">Full Name</label>
+        <input id="name" name="name" type="text" required />
+        <div id="nameErr" class="error"></div>
+      </div>
+
+      <div class="form-group">
+        <label for="phone">Phone Number</label>
+        <input id="phone" name="phone" type="text" required />
+        <div id="phoneErr" class="error"></div>
+      </div>
+
+      <div class="form-group">
+        <label for="pincode">PIN Code</label>
+        <input id="pincode" name="pincode" type="text" required />
+        <div id="pincodeErr" class="error"></div>
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email Address</label>
+        <input id="email" name="email" type="email" required />
+        <div id="emailErr" class="error"></div>
+      </div>
+
+      <div class="form-group">
+        <label>Type of Renewable Source</label>
+        <div class="radio-group">
+          <label><input type="radio" name="source" value="Solar" required /> Solar</label>
+          <label><input type="radio" name="source" value="Wind" /> Wind / Turbine</label>
+          <label><input type="radio" name="source" value="Hydro" /> Hydro</label>
+        </div>
+        <div id="sourceErr" class="error"></div>
+      </div>
+
+      <div class="button-group">
+        <button type="submit" class="btn-submit">Submit Application</button>
+        <button type="button" class="btn-cancel" onclick="location.href='/'">Cancel</button>
+      </div>
+
+      <div id="result"></div>
+    </form>
+  </div>
+
+  <script>
+    const form = document.getElementById('appForm');
+    const resultEl = document.getElementById('result');
+
+    function clearErrors() {
+      document.querySelectorAll('.error').forEach(el => el.textContent = '');
+      resultEl.textContent = '';
+      resultEl.className = '';
+    }
+
+    form.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      clearErrors();
+
+      const name = document.getElementById('name').value.trim();
+      const phone = document.getElementById('phone').value.trim();
+      const pincode = document.getElementById('pincode').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const source = document.querySelector('input[name="source"]:checked')?.value;
+
+      let valid = true;
+      if (!name) { document.getElementById('nameErr').textContent = 'Name is required.'; valid = false; }
+      if (!phone || !/^\d{10}$/.test(phone)) { document.getElementById('phoneErr').textContent = 'Enter a valid 10-digit phone number.'; valid = false; }
+      if (!pincode || !/^\d{6}$/.test(pincode)) { document.getElementById('pincodeErr').textContent = 'Enter a valid 6-digit PIN code.'; valid = false; }
+      if (!email || !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) { document.getElementById('emailErr').textContent = 'Enter a valid email address.'; valid = false; }
+      if (!source) { document.getElementById('sourceErr').textContent = 'Select a renewable source.'; valid = false; }
+
+      if (!valid) return;
+
+      try {
+        const resp = await fetch('/api/applications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, phone, pincode, email, source })
+        });
+
+        const data = await resp.json();
+        if (resp.ok) {
+          resultEl.textContent = data.message || 'Application submitted successfully!';
+          resultEl.className = 'success';
+          form.reset();
+          setTimeout(() => { location.href = '/'; }, 2000);
+        } else {
+          resultEl.textContent = data.error || 'Error submitting application';
+          resultEl.style.color = '#b00020';
+        }
+      } catch (err) {
+        resultEl.textContent = 'Network error: ' + err.message;
+        resultEl.style.color = '#b00020';
+      }
+    });
+  </script>
+</body>
+</html>
