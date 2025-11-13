@@ -4,14 +4,24 @@
   <meta charset="utf-8" />
   <title>Live Data Tracking — Renewable Energy Tracker</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="/static/styles.css" />
 </head>
 <body>
+  <style>
+    body { text-align: center; padding: 3rem 1rem; }
+    .container { max-width: 600px; margin: 2rem auto; }
+    h1 { color: #2e7d32; margin-bottom: 1rem; }
+    p { color: #666; font-size: 16px; margin-bottom: 2rem; }
+    .btn-large { display: inline-block; padding: 1rem 2.5rem; background: #388e3c; color: white; text-decoration: none; border-radius: 8px; font-size: 18px; font-weight: bold; }
+    .btn-large:hover { background: #2e7d32; }
+  </style>
+
   <nav><span style="font-weight:bold;">Live Data Tracking</span></nav>
-  <main style="padding:1.5rem;">
-    <h1>Live Data Tracking</h1>
-    <p>Placeholder page — show live solar and wind generation, charts and realtime feed here.</p>
-    <p><a class="btn" href="landing.html">Back to Home</a></p>
-  </main>
+  <div class="container">
+    <h1>⚡ Carbon Calculator</h1>
+    <p>Monitor your electricity consumption and calculate carbon emissions</p>
+    <a href="/carbon-calculator" class="btn-large">🟢 Open Calculator</a>
+    <p style="margin-top: 2rem;"><a href="/" style="color: #388e3c; text-decoration: none; font-weight: bold;">← Back to Home</a></p>
+  </div>
 </body>
 </html>
