@@ -3,82 +3,99 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Login / User Info</title>
+  <title>Login</title>
+  <link rel="stylesheet" href="/static/styles.css" />
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: auto; }
-    form { display: grid; gap: 10px; }
-    label { font-weight: bold; }
-    input, textarea { padding: 8px; font-size: 14px; width: 100%; box-sizing: border-box; }
-    .row { display: flex; gap: 10px; }
-    .row > * { flex: 1; }
-    .error { color: #b00020; font-size: 13px; }
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: auto; }
+    .login-container { background: #f1f8e9; border-radius: 12px; padding: 2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .login-container h1 { color: #2e7d32; text-align: center; }
+    .form-group { margin-bottom: 1.2rem; }
+    .form-group label { display: block; font-weight: bold; margin-bottom: 0.4rem; }
+    .form-group input { padding: 0.6rem; font-size: 14px; width: 100%; box-sizing: border-box; border: 1px solid #cfd8dc; border-radius: 6px; }
+    .form-group input:focus { outline: none; border-color: #388e3c; box-shadow: 0 0 4px rgba(56, 142, 60, 0.3); }
+    .radio-group { display: flex; gap: 2rem; margin-bottom: 1.5rem; }
+    .radio-group label { display: inline-flex; align-items: center; font-weight: normal; margin-bottom: 0; }
+    .radio-group input[type="radio"] { margin-right: 0.5rem; }
+    .hidden { display: none; }
+    .error { color: #b00020; font-size: 13px; margin-top: 0.3rem; }
     .success { color: #007700; font-size: 14px; }
-    button { padding: 10px 14px; font-size: 15px; }
+    button { padding: 0.8rem 1.5rem; font-size: 15px; background: #388e3c; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+    button:hover { background: #2e7d32; }
+    #result { margin-top: 1rem; padding: 0.8rem; border-radius: 6px; text-align: center; }
   </style>
 </head>
 <body>
-  <h1>User Signup / Info</h1>
-  <p>Fill the form below to submit your details.</p>
+  <div class="login-container">
+    <h1>Login</h1>
+    <p style="text-align: center; color: #555;">Choose your login method</p>
 
-  <form id="userForm">
-    <div>
-      <label for="name">Full Name</label>
-      <input id="name" name="name" required />
-      <div id="nameErr" class="error" aria-live="polite"></div>
+    <div class="radio-group">
+      <label>
+        <input type="radio" name="loginMethod" value="email" checked />
+        Login with Email
+      </label>
+      <label>
+        <input type="radio" name="loginMethod" value="phone" />
+        Login with Phone
+      </label>
     </div>
 
-    <div class="row">
-      <div>
-        <label for="phone">Phone</label>
-        <input id="phone" name="phone" required placeholder="10 digits" />
+    <form id="loginForm">
+      <div id="emailField" class="form-group">
+        <label for="email">Email Address</label>
+        <input id="email" name="email" type="email" placeholder="Enter your email" />
+        <div id="emailErr" class="error" aria-live="polite"></div>
+      </div>
+
+      <div id="phoneField" class="form-group hidden">
+        <label for="phone">Phone Number</label>
+        <input id="phone" name="phone" type="text" placeholder="10-digit phone number" />
         <div id="phoneErr" class="error" aria-live="polite"></div>
       </div>
 
-      <div>
-        <label for="pincode">Pincode</label>
-        <input id="pincode" name="pincode" required placeholder="6 digits" />
-        <div id="pincodeErr" class="error" aria-live="polite"></div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" placeholder="Enter your password" required />
+        <div id="passwordErr" class="error" aria-live="polite"></div>
       </div>
-    </div>
 
-    <div>
-      <label for="email">Email</label>
-      <input id="email" name="email" type="email" required />
-      <div id="emailErr" class="error" aria-live="polite"></div>
-    </div>
+      <button type="submit">Login</button>
+      <div id="result" aria-live="polite"></div>
+    </form>
 
-    <div>
-      <label for="password">Password</label>
-      <input id="password" name="password" type="password" required />
-      <div id="passwordErr" class="error" aria-live="polite"></div>
-    </div>
-
-    <div>
-      <label for="address">Address</label>
-      <textarea id="address" name="address" rows="3" required></textarea>
-      <div id="addressErr" class="error" aria-live="polite"></div>
-    </div>
-
-    <div>
-      <button type="submit">Submit</button>
-    </div>
-
-    <div id="result" aria-live="polite"></div>
-  </form>
+    <p style="text-align: center; margin-top: 1.5rem; color: #555;">
+      Don't have an account? <a href="/signup" style="color: #388e3c; text-decoration: none; font-weight: bold;">Sign up here</a>
+    </p>
+  </div>
 
   <script>
+    const emailField = document.getElementById('emailField');
+    const phoneField = document.getElementById('phoneField');
+    const emailInput = document.getElementById('email');
+    const phoneInput = document.getElementById('phone');
+    const form = document.getElementById('loginForm');
+    const resultEl = document.getElementById('result');
+
+    // Toggle between email and phone fields
+    document.querySelectorAll('input[name="loginMethod"]').forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        if (e.target.value === 'email') {
+          emailField.classList.remove('hidden');
+          phoneField.classList.add('hidden');
+          emailInput.focus();
+        } else {
+          emailField.classList.add('hidden');
+          phoneField.classList.remove('hidden');
+          phoneInput.focus();
+        }
+        clearErrors();
+      });
+    });
+
     const patterns = {
       phone: /^[6-9]\d{9}$/,
-      pincode: /^\d{6}$/,
-      email: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
-      passwordUpper: /[A-Z]/,
-      passwordLower: /[a-z]/,
-      passwordDigit: /\d/,
-      passwordSpecial: /[!@#$%^&*(),.?":{}|<>]/
+      email: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
     };
-
-    const form = document.getElementById('userForm');
-    const resultEl = document.getElementById('result');
 
     function clearErrors() {
       document.querySelectorAll('.error').forEach(el => el.textContent = '');
@@ -90,47 +107,60 @@
       ev.preventDefault();
       clearErrors();
 
-      const name = document.getElementById('name').value.trim();
-      const phone = document.getElementById('phone').value.trim();
-      const pincode = document.getElementById('pincode').value.trim();
-      const email = document.getElementById('email').value.trim();
+      const loginMethod = document.querySelector('input[name="loginMethod"]:checked').value;
       const password = document.getElementById('password').value;
-      const address = document.getElementById('address').value.trim();
+      let identifier, isValid = true;
 
-      let valid = true;
-      if (!name) { document.getElementById('nameErr').textContent = 'Name is required.'; valid = false; }
-      if (!patterns.phone.test(phone)) { document.getElementById('phoneErr').textContent = 'Enter a valid 10-digit phone starting with 6-9.'; valid = false; }
-      if (!patterns.pincode.test(pincode)) { document.getElementById('pincodeErr').textContent = 'Enter a valid 6-digit pincode.'; valid = false; }
-      if (!patterns.email.test(email)) { document.getElementById('emailErr').textContent = 'Enter a valid email.'; valid = false; }
-
-      if (password.length < 8 || !patterns.passwordUpper.test(password) || !patterns.passwordLower.test(password) || !patterns.passwordDigit.test(password) || !patterns.passwordSpecial.test(password)) {
-        document.getElementById('passwordErr').textContent = 'Password must be at least 8 chars and include uppercase, lowercase, digit and special char.'; valid = false;
+      if (loginMethod === 'email') {
+        identifier = emailInput.value.trim();
+        if (!identifier) {
+          document.getElementById('emailErr').textContent = 'Email is required.';
+          isValid = false;
+        } else if (!patterns.email.test(identifier)) {
+          document.getElementById('emailErr').textContent = 'Enter a valid email address.';
+          isValid = false;
+        }
+      } else {
+        identifier = phoneInput.value.trim();
+        if (!identifier) {
+          document.getElementById('phoneErr').textContent = 'Phone number is required.';
+          isValid = false;
+        } else if (!patterns.phone.test(identifier)) {
+          document.getElementById('phoneErr').textContent = 'Enter a valid 10-digit phone number starting with 6-9.';
+          isValid = false;
+        }
       }
 
-      if (!address) { document.getElementById('addressErr').textContent = 'Address is required.'; valid = false; }
+      if (!password) {
+        document.getElementById('passwordErr').textContent = 'Password is required.';
+        isValid = false;
+      }
 
-      if (!valid) return;
+      if (!isValid) return;
 
-      // Send JSON to /api/users (server expects name, phone, pincode, address)
       try {
-        const resp = await fetch('/api/users', {
+        const resp = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, phone, pincode, address, email, password })
+          body: JSON.stringify({ identifier, password, login_method: loginMethod })
         });
 
         const data = await resp.json();
         if (resp.ok) {
-          resultEl.textContent = data.message || 'Saved successfully';
+          resultEl.textContent = data.message || 'Login successful!';
           resultEl.className = 'success';
-          form.reset();
+          // Optionally redirect after login
+          setTimeout(() => {
+            // Redirect to dashboard or home
+            location.href = '/';
+          }, 1500);
         } else {
-          resultEl.textContent = data.error || 'Error saving';
-          resultEl.className = 'error';
+          resultEl.textContent = data.error || 'Login failed';
+          resultEl.style.color = '#b00020';
         }
       } catch (err) {
         resultEl.textContent = 'Network or server error: ' + err.message;
-        resultEl.className = 'error';
+        resultEl.style.color = '#b00020';
       }
     });
   </script>
