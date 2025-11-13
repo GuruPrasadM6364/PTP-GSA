@@ -189,6 +189,46 @@ def application_page():
     return "<h1>Application form not found</h1>"
 
 
+@app.route('/live-data-tracking.html')
+def live_data_tracking_page():
+    """Serve live data tracking page."""
+    html_path = os.path.join(os.path.dirname(__file__), 'live-data-tracking.html')
+    if os.path.exists(html_path):
+        with open(html_path, 'r') as f:
+            return f.read()
+    return "<h1>Live Data Tracking page not found</h1>"
+
+
+@app.route('/impact-visualization.html')
+def impact_visualization_page():
+    """Serve impact visualization page."""
+    html_path = os.path.join(os.path.dirname(__file__), 'impact-visualization.html')
+    if os.path.exists(html_path):
+        with open(html_path, 'r') as f:
+            return f.read()
+    return "<h1>Impact Visualization page not found</h1>"
+
+
+@app.route('/community-comparison.html')
+def community_comparison_page():
+    """Serve community comparison page."""
+    html_path = os.path.join(os.path.dirname(__file__), 'community-comparison.html')
+    if os.path.exists(html_path):
+        with open(html_path, 'r') as f:
+            return f.read()
+    return "<h1>Community Comparison page not found</h1>"
+
+
+@app.route('/insights-trends.html')
+def insights_trends_page():
+    """Serve insights and trends page."""
+    html_path = os.path.join(os.path.dirname(__file__), 'insights-trends.html')
+    if os.path.exists(html_path):
+        with open(html_path, 'r') as f:
+            return f.read()
+    return "<h1>Insights & Trends page not found</h1>"
+
+
 @app.route('/api/regions')
 def api_regions():
     """API endpoint to get all regions."""

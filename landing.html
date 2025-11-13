@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <title>Renewable Energy Tracker</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="/static/styles.css" />
 </head>
 <body>
   <nav>
@@ -22,29 +22,29 @@
 
   <div class="features" id="features">
     <div class="feature">
-      <button class="btn" onclick="location.href='live-data-tracking.html'">Live Data Tracking</button>
+      <button class="btn" onclick="location.href='/live-data-tracking.html'">Live Data Tracking</button>
       <div class="feature-desc">Monitor real-time solar and wind generation.</div>
     </div>
     <div class="feature">
-      <button class="btn" onclick="location.href='impact-visualization.html'">Impact Visualization</button>
+      <button class="btn" onclick="location.href='/impact-visualization.html'">Impact Visualization</button>
       <div class="feature-desc">See CO₂ savings and environmental effects.</div>
     </div>
     <div class="feature">
-      <button class="btn" onclick="location.href='community-comparison.html'">Community Comparison</button>
+      <button class="btn" onclick="location.href='/community-comparison.html'">Community Comparison</button>
       <div class="feature-desc">Benchmark usage and savings with nearby communities.</div>
     </div>
     <div class="feature">
-      <button class="btn" onclick="location.href='insights-trends.html'">Insights &amp; Trends</button>
+      <button class="btn" onclick="location.href='/insights-trends.html'">Insights &amp; Trends</button>
       <div class="feature-desc">Access predictive analytics for energy planning.</div>
     </div>
   </div>
 
   <div class="lower-ledge" id="apply">
     <div class="auth-row" aria-hidden="false">
-      <button class="btn" onclick="location.href='signup.html'">Sign Up</button>
-      <button class="btn" onclick="location.href='login.html'">Log In</button>
+      <button class="btn" onclick="location.href='/signup'">Sign Up</button>
+      <button class="btn" onclick="location.href='/login'">Log In</button>
       <button class="btn" onclick="handleCheckStatus();">Check Status</button>
-      <button class="btn" onclick="location.href='application.html'">Submit Application</button>
+      <button class="btn" onclick="location.href='/application'">Submit Application</button>
     </div>
 
     <div class="panels">
