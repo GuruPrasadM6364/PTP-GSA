@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Login / User Info</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: auto; }
+    form { display: grid; gap: 10px; }
+    label { font-weight: bold; }
+    input, textarea { padding: 8px; font-size: 14px; width: 100%; box-sizing: border-box; }
+    .row { display: flex; gap: 10px; }
+    .row > * { flex: 1; }
+    .error { color: #b00020; font-size: 13px; }
+    .success { color: #007700; font-size: 14px; }
+    button { padding: 10px 14px; font-size: 15px; }
+  </style>
+</head>
+<body>
+  <h1>User Signup / Info</h1>
+  <p>Fill the form below to submit your details.</p>
+
+  <form id="userForm">
+    <div>
+      <label for="name">Full Name</label>
+      <input id="name" name="name" required />
+      <div id="nameErr" class="error" aria-live="polite"></div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label for="phone">Phone</label>
+        <input id="phone" name="phone" required placeholder="10 digits" />
+        <div id="phoneErr" class="error" aria-live="polite"></div>
+      </div>
+
+      <div>
+        <label for="pincode">Pincode</label>
+        <input id="pincode" name="pincode" required placeholder="6 digits" />
+        <div id="pincodeErr" class="error" aria-live="polite"></div>
+      </div>
+    </div>
+
+    <div>
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" required />
+      <div id="emailErr" class="error" aria-live="polite"></div>
+    </div>
+
+    <div>
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" required />
+      <div id="passwordErr" class="error" aria-live="polite"></div>
+    </div>
+
+    <div>
+      <label for="address">Address</label>
+      <textarea id="address" name="address" rows="3" required></textarea>
+      <div id="addressErr" class="error" aria-live="polite"></div>
+    </div>
+
+    <div>
+      <button type="submit">Submit</button>
+    </div>
+
+    <div id="result" aria-live="polite"></div>
+  </form>
+
+  <script>
+    const patterns = {
+      phone: /^[6-9]\d{9}$/,
+      pincode: /^\d{6}$/,
+      email: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+      passwordUpper: /[A-Z]/,
+      passwordLower: /[a-z]/,
+      passwordDigit: /\d/,
+      passwordSpecial: /[!@#$%^&*(),.?":{}|<>]/
+    };
+
+    const form = document.getElementById('userForm');
+    const resultEl = document.getElementById('result');
+
+    function clearErrors() {
+      document.querySelectorAll('.error').forEach(el => el.textContent = '');
+      resultEl.textContent = '';
+      resultEl.className = '';
+    }
+
+    form.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      clearErrors();
+
+      const name = document.getElementById('name').value.trim();
+      const phone = document.getElementById('phone').value.trim();
+      const pincode = document.getElementById('pincode').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const address = document.getElementById('address').value.trim();
+
+      let valid = true;
+      if (!name) { document.getElementById('nameErr').textContent = 'Name is required.'; valid = false; }
+      if (!patterns.phone.test(phone)) { document.getElementById('phoneErr').textContent = 'Enter a valid 10-digit phone starting with 6-9.'; valid = false; }
+      if (!patterns.pincode.test(pincode)) { document.getElementById('pincodeErr').textContent = 'Enter a valid 6-digit pincode.'; valid = false; }
+      if (!patterns.email.test(email)) { document.getElementById('emailErr').textContent = 'Enter a valid email.'; valid = false; }
+
+      if (password.length < 8 || !patterns.passwordUpper.test(password) || !patterns.passwordLower.test(password) || !patterns.passwordDigit.test(password) || !patterns.passwordSpecial.test(password)) {
+        document.getElementById('passwordErr').textContent = 'Password must be at least 8 chars and include uppercase, lowercase, digit and special char.'; valid = false;
+      }
+
+      if (!address) { document.getElementById('addressErr').textContent = 'Address is required.'; valid = false; }
+
+      if (!valid) return;
+
+      // Send JSON to /api/users (server expects name, phone, pincode, address)
+      try {
+        const resp = await fetch('/api/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, phone, pincode, address, email })
+        });
+
+        const data = await resp.json();
+        if (resp.ok) {
+          resultEl.textContent = data.message || 'Saved successfully';
+          resultEl.className = 'success';
+          form.reset();
+        } else {
+          resultEl.textContent = data.error || 'Error saving';
+          resultEl.className = 'error';
+        }
+      } catch (err) {
+        resultEl.textContent = 'Network or server error: ' + err.message;
+        resultEl.className = 'error';
+      }
+    });
+  </script>
+</body>
+</html>

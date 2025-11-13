@@ -151,6 +151,16 @@ def index():
     return html_content
 
 
+@app.route('/login')
+def login_page():
+    """Serve the login / user-info HTML page."""
+    html_path = os.path.join(os.path.dirname(__file__), 'login.html')
+    if os.path.exists(html_path):
+        with open(html_path, 'r') as f:
+            return f.read()
+    return "<h1>Login page not found</h1>"
+
+
 @app.route('/api/regions')
 def api_regions():
     """API endpoint to get all regions."""
