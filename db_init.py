@@ -7,6 +7,7 @@ from datetime import date, datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from models import Base, Region, Project, Measurement, CarbonMetric, Target, Report, User
+from werkzeug.security import generate_password_hash
 
 
 DB_URL = "sqlite:///renewable.db"
@@ -15,6 +16,20 @@ DB_URL = "sqlite:///renewable.db"
 def init_db(engine_url: str = DB_URL) -> None:
     engine = create_engine(engine_url, echo=False, future=True)
     Base.metadata.create_all(engine)
+
+    # Ensure new columns exist in SQLite users table (add if missing)
+    with engine.connect() as conn:
+        try:
+            result = conn.exec_driver_sql("PRAGMA table_info('users')")
+            cols = [row[1] for row in result.fetchall()]
+            if 'email' not in cols:
+                conn.exec_driver_sql("ALTER TABLE users ADD COLUMN email VARCHAR(200)")
+            if 'password_hash' not in cols:
+                conn.exec_driver_sql("ALTER TABLE users ADD COLUMN password_hash VARCHAR(128)")
+        except Exception:
+            # If table doesn't exist yet or PRAGMA fails, ignore
+            pass
+
     print("Created tables (if not exist) at", engine_url)
 
 
@@ -73,6 +88,22 @@ def seed_sample(engine_url: str = DB_URL) -> None:
 
         session.commit()
         print("Seeded sample data.")
+        # Add a sample user (if not exists)
+        try:
+            user = User(
+                name="Sample User",
+                phone="9876543210",
+                email="sample@example.com",
+                password_hash=generate_password_hash("Password1!"),
+                pincode="560001",
+                address="123 Example Street",
+            )
+            session.add(user)
+            session.commit()
+            print("Added sample user.")
+        except Exception:
+            # ignore if unique constraint fails
+            session.rollback()
 
 
 if __name__ == "__main__":

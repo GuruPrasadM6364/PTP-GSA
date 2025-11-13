@@ -18,6 +18,7 @@ from models import Region, Project, CarbonMetric, Measurement, Target, Report, B
 import db_init
 import os
 import re
+from werkzeug.security import generate_password_hash
 
 
 def validate_phone(phone):
@@ -161,6 +162,16 @@ def login_page():
     return "<h1>Login page not found</h1>"
 
 
+@app.route('/signup')
+def signup_page():
+    """Serve the signup HTML page."""
+    html_path = os.path.join(os.path.dirname(__file__), 'signup.html')
+    if os.path.exists(html_path):
+        with open(html_path, 'r') as f:
+            return f.read()
+    return "<h1>Signup page not found</h1>"
+
+
 @app.route('/api/regions')
 def api_regions():
     """API endpoint to get all regions."""
@@ -213,6 +224,16 @@ def api_submit_user():
         
         if not validate_pincode(data['pincode']):
             return jsonify({'error': 'Invalid pincode format'}), 400
+
+        # Optional: validate email and password if provided
+        email = data.get('email')
+        password = data.get('password')
+        if email and not validate_email(email):
+            return jsonify({'error': 'Invalid email format'}), 400
+        if password:
+            ok, msg = validate_password(password)
+            if not ok:
+                return jsonify({'error': f'Password invalid: {msg}'}), 400
         
         # Save to database
         engine = create_engine(DB_URL, future=True)
@@ -220,6 +241,8 @@ def api_submit_user():
             user = User(
                 name=data['name'],
                 phone=data['phone'],
+                email=email,
+                password_hash=generate_password_hash(password) if password else None,
                 pincode=data['pincode'],
                 address=data['address']
             )
@@ -251,38 +274,45 @@ def list_projects(engine_url: str = DB_URL) -> None:
 
 
 def main():
-	parser = argparse.ArgumentParser(description="Manage renewable database")
-	parser.add_argument("command", choices=["init-db", "seed", "list-regions", "list-projects", "serve", "collect-user-info"], help="command to run")
-	args = parser.parse_args()
 
-	if args.command == "init-db":
-		db_init.init_db(DB_URL)
-	elif args.command == "seed":
-		db_init.seed_sample(DB_URL)
-	elif args.command == "list-regions":
-		list_regions(DB_URL)
-	elif args.command == "list-projects":
-		list_projects(DB_URL)
-	elif args.command == "serve":
-		print("Starting web server at http://localhost:5000")
-		app.run(debug=True, host='0.0.0.0', port=5000)
-	elif args.command == "collect-user-info":
-		user_info = get_user_info()
-		display_user_info(user_info)
-		try:
-			engine = create_engine(DB_URL, future=True)
-			with Session(engine) as session:
-				user = User(
-					name=user_info['name'],
-					phone=user_info['phone'],
-					pincode=user_info['pincode'],
-					address=user_info['address']
-				)
-				session.add(user)
-				session.commit()
-				print(f"\n✅ User information saved to database with ID: {user.id}")
-		except Exception as e:
-			print(f"\n❌ Error saving to database: {str(e)}")
+    parser = argparse.ArgumentParser(description="Manage renewable database")
+    parser.add_argument(
+        "command",
+        choices=["init-db", "seed", "list-regions", "list-projects", "serve", "collect-user-info"],
+        help="command to run",
+    )
+    args = parser.parse_args()
+
+    if args.command == "init-db":
+        db_init.init_db(DB_URL)
+    elif args.command == "seed":
+        db_init.seed_sample(DB_URL)
+    elif args.command == "list-regions":
+        list_regions(DB_URL)
+    elif args.command == "list-projects":
+        list_projects(DB_URL)
+    elif args.command == "serve":
+        print("Starting web server at http://localhost:5000")
+        app.run(debug=True, host='0.0.0.0', port=5000)
+    elif args.command == "collect-user-info":
+        user_info = get_user_info()
+        display_user_info(user_info)
+        try:
+            engine = create_engine(DB_URL, future=True)
+            with Session(engine) as session:
+                user = User(
+                    name=user_info['name'],
+                    phone=user_info['phone'],
+                    email=user_info.get('email'),
+                    password_hash=generate_password_hash(user_info['password']) if user_info.get('password') else None,
+                    pincode=user_info['pincode'],
+                    address=user_info['address'],
+                )
+                session.add(user)
+                session.commit()
+                print(f"\n✅ User information saved to database with ID: {user.id}")
+        except Exception as e:
+            print(f"\n❌ Error saving to database: {str(e)}")
 
 
 if __name__ == "__main__":

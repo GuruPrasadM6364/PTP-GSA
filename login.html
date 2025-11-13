@@ -116,7 +116,7 @@
         const resp = await fetch('/api/users', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, phone, pincode, address, email })
+          body: JSON.stringify({ name, phone, pincode, address, email, password })
         });
 
         const data = await resp.json();

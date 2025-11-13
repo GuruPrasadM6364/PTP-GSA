@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Sign Up</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <h1>Sign Up</h1>
+  <p>Create a new account</p>
+  <form id="signupForm">
+    <label>Name <input id="name" name="name" required /></label>
+    <label>Phone <input id="phone" name="phone" required /></label>
+    <label>Email <input id="email" name="email" type="email" required /></label>
+    <label>Password <input id="password" name="password" type="password" required /></label>
+    <label>Pincode <input id="pincode" name="pincode" required /></label>
+    <label>Address <textarea id="address" name="address" required></textarea></label>
+    <button type="submit">Sign Up</button>
+  </form>
+  <div id="result"></div>
+  <script>
+    const form = document.getElementById('signupForm');
+    form.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const name = document.getElementById('name').value.trim();
+      const phone = document.getElementById('phone').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const pincode = document.getElementById('pincode').value.trim();
+      const address = document.getElementById('address').value.trim();
+      const resp = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, phone, email, password, pincode, address })
+      });
+      const data = await resp.json();
+      const result = document.getElementById('result');
+      if (resp.ok) { result.textContent = data.message || 'Saved'; result.style.color = 'green'; form.reset(); }
+      else { result.textContent = data.error || 'Error'; result.style.color = 'red'; }
+    });
+  </script>
+</body>
+</html>

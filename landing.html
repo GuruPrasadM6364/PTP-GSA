@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <title>Renewable Energy Tracker</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="/static/styles.css" />
 </head>
 <body>
   <nav>
@@ -46,8 +46,8 @@
   <div class="lower-ledge" id="apply">
     <div class="auth-row" aria-hidden="false">
       <!-- direct links to separate pages -->
-      <button class="btn" onclick="location.href='signup.html'">Sign Up</button>
-      <button class="btn" onclick="location.href='login.html'">Log In</button>
+      <button class="btn" onclick="location.href='/signup'">Sign Up</button>
+      <button class="btn" onclick="location.href='/login'">Log In</button>
       <!-- compact status button matching signup/login style -->
       <button class="btn" onclick="handleCheckStatus()">Check Status</button>
       <!-- new button to submit a new application -->
