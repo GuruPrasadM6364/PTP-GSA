@@ -64,6 +64,18 @@ body {
       text-align: center;
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
     }
+    .feature .btn {
+      width: 100%;
+      padding: 0.75rem;
+      border-radius: 12px;
+      font-weight: 700;
+      margin-bottom: 0.6rem;
+    }
+    .feature-desc {
+      text-align: center;
+      font-size: 0.95rem;
+      color: #2e7d32;
+    }
 
     /* New styles for lower ledge and forms */
     .lower-ledge {
