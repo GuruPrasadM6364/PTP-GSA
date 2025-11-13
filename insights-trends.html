@@ -4,14 +4,63 @@
   <meta charset="utf-8" />
   <title>Insights & Trends — Renewable Energy Tracker</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <link rel="stylesheet" href="/static/styles.css" />
+  <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
-  <nav><span style="font-weight:bold;">Insights &amp; Trends</span></nav>
-  <main style="padding:1.5rem;">
-    <h1>Insights & Trends</h1>
-    <p>Placeholder page — predictive analytics and planning tools go here.</p>
-    <p><a class="btn" href="landing.html">Back to Home</a></p>
+  <nav>
+    <div style="display:flex;align-items:center;gap:1rem;">
+      <strong style="color:#fff">Renewable Tracker</strong>
+    </div>
+    <div>
+      <a class="btn" href="landing.html" style="background:transparent;padding:0.4rem 0.8rem;border-radius:8px;">Home</a>
+    </div>
+  </nav>
+
+  <main>
+    <section class="hero">
+      <h1>Insights & Trends</h1>
+      <p>Predictive analytics, trend visualizations, and recommendations to optimize renewable energy adoption.</p>
+      <div class="cta">
+        <a class="btn" href="application.html">Run Analysis</a>
+        <a class="btn" href="impact-visualization.html">View Visuals</a>
+      </div>
+    </section>
+
+    <section class="features" aria-label="Key features">
+      <div class="feature">
+        <button class="btn">Predictive Savings</button>
+        <div class="feature-desc">Model future savings from different system sizes and configurations.</div>
+      </div>
+      <div class="feature">
+        <button class="btn">Trend Visuals</button>
+        <div class="feature-desc">Interactive charts for energy use and carbon reductions.</div>
+      </div>
+      <div class="feature">
+        <button class="btn">Region Comparison</button>
+        <div class="feature-desc">Compare performance and incentives across regions.</div>
+      </div>
+      <div class="feature">
+        <button class="btn">Recommendations</button>
+        <div class="feature-desc">Actionable suggestions tailored to your profile.</div>
+      </div>
+    </section>
+
+    <section class="lower-ledge">
+      <div class="panels">
+        <div class="panel">
+          <h3>Recent Trends</h3>
+          <p>Monthly production and usage trends show where you can improve efficiency.</p>
+        </div>
+        <div class="panel">
+          <h3>Prediction Summary</h3>
+          <p>Short summary of predicted savings and payback period for recommended configurations.</p>
+        </div>
+      </div>
+    </section>
   </main>
+
+  <footer>
+    <div>© Renewable Energy Tracker — Insights & Trends</div>
+  </footer>
 </body>
 </html>

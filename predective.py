@@ -1,5 +1,5 @@
-import numpy as np
-import matplotlib.pyplot as plt
+import numpy as np # type: ignore
+import matplotlib.pyplot as plt # type: ignore
 
 def auto_renewable_prediction():
     print("=== 🌞 Predictive Renewable Energy Growth Model ===\n")
