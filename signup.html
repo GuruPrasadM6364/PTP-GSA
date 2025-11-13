@@ -3,22 +3,61 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Sign Up</title>
-  <link rel="stylesheet" href="/static/styles.css" />
+  <title>Sign Up — Renewable Energy Tracker</title>
+  <link rel="stylesheet" href="signupStyle.css" />
 </head>
 <body>
-  <h1>Sign Up</h1>
-  <p>Create a new account</p>
-  <form id="signupForm">
-    <label>Name <input id="name" name="name" required /></label>
-    <label>Phone <input id="phone" name="phone" required /></label>
-    <label>Email <input id="email" name="email" type="email" required /></label>
-    <label>Password <input id="password" name="password" type="password" required /></label>
-    <label>Pincode <input id="pincode" name="pincode" required /></label>
-    <label>Address <textarea id="address" name="address" required></textarea></label>
-    <button type="submit">Sign Up</button>
-  </form>
-  <div id="result"></div>
+  <nav>
+    <span style="font-weight: bold; font-size: 1.2rem;">Renewable Energy Tracker</span>
+  </nav>
+
+  <div class="hero">
+    <h1>Create an account</h1>
+    <p>Sign up to submit applications and track your renewable projects.</p>
+  </div>
+
+  <div class="lower-ledge">
+    <div class="panel">
+      <h3>Sign Up</h3>
+      <form id="signupForm">
+        <div class="form-field">
+          <label for="name">Full name</label>
+          <input id="name" name="name" required />
+        </div>
+        <div class="form-field">
+          <label for="phone">Phone</label>
+          <input id="phone" name="phone" required />
+        </div>
+        <div class="form-field">
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" required />
+        </div>
+        <div class="form-field">
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" required />
+        </div>
+        <div class="form-field">
+          <label for="pincode">Pincode</label>
+          <input id="pincode" name="pincode" required />
+        </div>
+        <div class="form-field">
+          <label for="address">Address</label>
+          <textarea id="address" name="address" required></textarea>
+        </div>
+
+        <div style="text-align:right;">
+          <button class="btn" type="submit">Sign Up</button>
+        </div>
+      </form>
+
+      <div id="result" style="margin-top:0.75rem;"></div>
+    </div>
+  </div>
+
+  <footer>
+    &copy; 2025 Renewable Energy Tracker. Made for a cleaner planet.
+  </footer>
+
   <script>
     const form = document.getElementById('signupForm');
     form.addEventListener('submit', async (ev) => {
@@ -29,15 +68,27 @@
       const password = document.getElementById('password').value;
       const pincode = document.getElementById('pincode').value.trim();
       const address = document.getElementById('address').value.trim();
-      const resp = await fetch('/api/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, phone, email, password, pincode, address })
-      });
-      const data = await resp.json();
-      const result = document.getElementById('result');
-      if (resp.ok) { result.textContent = data.message || 'Saved'; result.style.color = 'green'; form.reset(); }
-      else { result.textContent = data.error || 'Error'; result.style.color = 'red'; }
+      try {
+        const resp = await fetch('/api/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, phone, email, password, pincode, address })
+        });
+        const data = await resp.json();
+        const result = document.getElementById('result');
+        if (resp.ok) {
+          result.textContent = data.message || 'Saved';
+          result.style.color = 'green';
+          form.reset();
+        } else {
+          result.textContent = data.error || 'Error';
+          result.style.color = 'red';
+        }
+      } catch (err) {
+        const result = document.getElementById('result');
+        result.textContent = 'Network error';
+        result.style.color = 'red';
+      }
     });
   </script>
 </body>
