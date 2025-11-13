@@ -2,149 +2,103 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Community Comparison — Renewable Energy Tracker</title>
+  <title>Live Data Tracking — Renewable Energy Tracker</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link rel="stylesheet" href="styles.css" />
   <style>
-    .container { max-width: 960px; margin: 1.25rem auto; padding: 0 1rem; }
-    .summary { display:flex; gap:1rem; flex-wrap:wrap; align-items:center; margin-bottom:1rem; }
-    .summary .panel { flex: 1 1 320px; }
-    .list { display:flex; flex-direction:column; gap:0.75rem; }
-    .community-card { background:#fff; border-radius:10px; padding:0.9rem; box-shadow:0 2px 6px rgba(0,0,0,0.04); display:flex; justify-content:space-between; align-items:center; gap:1rem; }
-    .metric { font-weight:700; color:#2e7d32; }
+    body { text-align: center; padding: 2.5rem 1rem; }
+    .container { max-width: 720px; margin: 1.5rem auto; }
+    h1 { color: #2e7d32; margin-bottom: 0.5rem; }
+    p.lead { color: #666; font-size: 16px; margin-bottom: 1rem; }
+    .card { background:#fff; border-radius:10px; padding:1rem; box-shadow:0 2px 8px rgba(0,0,0,0.06); margin-bottom:1rem; text-align:left; }
+    .metric { font-size:1.2rem; font-weight:700; color:#2e7d32; }
     .muted { color:#666; font-size:0.95rem; }
+    .btn-large { display: inline-block; padding: 0.75rem 1.25rem; background: #388e3c; color: white; text-decoration: none; border-radius: 8px; font-size: 15px; font-weight: bold; }
+    .btn-large:hover { background: #2e7d32; }
+    .row { display:flex; gap:0.8rem; flex-wrap:wrap; align-items:center; }
+    input[type="number"] { padding:0.5rem; border-radius:6px; border:1px solid #ddd; width:140px; }
   </style>
 </head>
 <body>
-  <nav><span style="font-weight:bold;">Community Comparison</span></nav>
+  <nav><span style="font-weight:bold;">Live Data Tracking</span></nav>
 
-  <main class="container">
-    <div class="panel">
-      <h1>Community Comparison</h1>
-      <p class="muted">We detect your approximate location from your IP (server-side) and fetch recent measured solar & wind metrics from Open‑Meteo for your area and nearby points. This page uses a small backend service (server.py) to perform IP lookup and API requests.</p>
+  <div class="container">
+    <h1>⚡ Carbon Estimate for Your Location</h1>
+    <p class="lead">We detect your location (browser or IP) and provide a quick CO₂ estimate per kWh and typical household emissions.</p>
+
+    <div class="card" id="locationCard">
+      <div id="locInfo" class="muted">Detecting location…</div>
     </div>
 
-    <div class="summary" id="locationSummary">
-      <div class="panel">
-        <h3>Your Location</h3>
-        <div id="locStatus">Detecting location from IP…</div>
-      </div>
-
-      <div class="panel">
-        <h3>Quick Actions</h3>
-        <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
-          <button class="btn" id="refreshBtn">Refresh</button>
-          <button class="btn" id="manualBtn">Enter location manually</button>
-          <a class="btn" href="landing.html">Back to Home</a>
-        </div>
-      </div>
+    <div class="card">
+      <h3>Estimated grid intensity</h3>
+      <div id="efValue" class="metric">— kg CO₂ / kWh</div>
+      <div id="hhEstimate" class="muted" style="margin-top:0.4rem;">— typical household annual consumption / emissions</div>
     </div>
 
-    <div class="panel">
-      <h3>Nearby Community Comparison (recent 7 days)</h3>
-      <div id="communityList" class="list">
-        <div class="muted">Awaiting results…</div>
+    <div class="card">
+      <h3>Quick calculator</h3>
+      <div class="row">
+        <label class="muted">Monthly electricity (kWh):</label>
+        <input id="monthlyKwh" type="number" min="0" step="1" value="200" />
+        <button class="btn-large" id="calcBtn">Calculate</button>
       </div>
-      <div id="note" class="muted" style="margin-top:0.75rem;"></div>
+      <div id="calcResult" style="margin-top:0.75rem;" class="muted"></div>
     </div>
-  </main>
+
+    <p style="margin-top:0.5rem;"><a class="btn-large" href="landing.html">← Back to Home</a></p>
+  </div>
 
   <script>
-    const locStatus = document.getElementById('locStatus');
-    const communityList = document.getElementById('communityList');
-    const note = document.getElementById('note');
-    const refreshBtn = document.getElementById('refreshBtn');
-    const manualBtn = document.getElementById('manualBtn');
-
-    refreshBtn.addEventListener('click', () => loadFromBackend());
-    manualBtn.addEventListener('click', async () => {
-      const place = prompt('Enter city, region or "lat,lon" (e.g. 12.9716,77.5946):');
-      if (!place) return;
-      // If user supplies lat,lon, call backend with lat/lon query parameters
-      const parts = place.split(',').map(p => p.trim());
-      if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-        const lat = parseFloat(parts[0]), lon = parseFloat(parts[1]);
-        loadFromBackend(lat, lon);
-      } else {
-        // try to geocode client-side via nominatim then call backend with lat/lon
+    async function loadEmissions() {
+      // Try browser geolocation first
+      let lat=null, lon=null;
+      if (navigator.geolocation) {
         try {
-          locStatus.textContent = 'Geocoding…';
-          const q = encodeURIComponent(place);
-          const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`);
-          const arr = await r.json();
-          if (arr && arr.length) {
-            const lat = parseFloat(arr[0].lat), lon = parseFloat(arr[0].lon);
-            loadFromBackend(lat, lon);
-          } else {
-            locStatus.textContent = 'Could not geocode input.';
-          }
-        } catch (err) {
-          locStatus.textContent = 'Geocoding failed.';
+          const p = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { timeout:8000 }));
+          lat = p.coords.latitude; lon = p.coords.longitude;
+        } catch (e) {
+          // ignore — server will use IP fallback
         }
       }
-    });
-
-    async function loadFromBackend(lat=null, lon=null) {
-      communityList.innerHTML = '<div class="muted">Loading nearby community stats…</div>';
-      note.textContent = '';
-      locStatus.textContent = 'Detecting location from IP (server)…';
+      const q = (lat !== null && lon !== null) ? `?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}` : '';
       try {
-        const params = lat !== null && lon !== null ? `?lat=${lat}&lon=${lon}` : '';
-        const resp = await fetch(`/api/community${params}`);
+        const resp = await fetch(`/api/emissions${q}`);
         if (!resp.ok) throw new Error('backend error');
         const data = await resp.json();
-        renderLocation(data.detected);
-        renderCommunities(data.communities, data.period);
-        note.textContent = 'Data sourced from ipapi.co (IP -> location) and Open‑Meteo (measured solar & wind).';
+        renderData(data);
       } catch (err) {
-        communityList.innerHTML = '<div class="muted">Failed to load community data (see console).</div>';
-        locStatus.textContent = 'Detection failed.';
+        document.getElementById('locInfo').textContent = 'Failed to fetch emission data. See console for details.';
         console.error(err);
       }
     }
 
-    function renderLocation(d) {
-      if (!d) { locStatus.textContent = 'Location not available'; return; }
-      locStatus.innerHTML = `
-        <div><strong>${escapeHtml(d.city || '—')}</strong> ${d.region ? '· ' + escapeHtml(d.region) : ''} ${d.country ? '· ' + escapeHtml(d.country) : ''}</div>
-        <div class="muted">Lat: ${Number(d.latitude).toFixed(4)} · Lon: ${Number(d.longitude).toFixed(4)}</div>
-      `;
-    }
+    function renderData(d) {
+      const det = d.detected || {};
+      const locInfo = document.getElementById('locInfo');
+      locInfo.innerHTML = `<div><strong>${escapeHtml(det.city || 'Unknown location')}</strong> ${det.region ? '· ' + escapeHtml(det.region) : ''} ${det.country ? '· ' + escapeHtml(det.country) : ''}</div>
+                           <div class="muted">Lat: ${Number(det.latitude).toFixed(4)} · Lon: ${Number(det.longitude).toFixed(4)} · source: ${escapeHtml(det.source || 'ip')}</div>`;
 
-    function renderCommunities(list, period) {
-      communityList.innerHTML = '';
-      if (!Array.isArray(list) || !list.length) {
-        communityList.innerHTML = '<div class="muted">No nearby data found.</div>';
-        return;
-      }
-      const p = document.createElement('div');
-      p.className = 'muted';
-      p.textContent = `Period: ${escapeHtml(period.start_date)} → ${escapeHtml(period.end_date)}`;
-      communityList.appendChild(p);
+      const ef = Number(d.emission_factor_kg_per_kwh) || 0;
+      document.getElementById('efValue').textContent = ef.toFixed(3) + ' kg CO₂ / kWh';
+      const hh_kwh = Number(d.typical_household_annual_kwh) || 0;
+      const hh_co2 = Number(d.typical_household_annual_co2_kg) || 0;
+      document.getElementById('hhEstimate').textContent = `${hh_kwh.toLocaleString()} kWh / yr → ${hh_co2.toLocaleString()} kg CO₂ / yr (${d.note || ''})`;
 
-      for (const c of list) {
-        const card = document.createElement('div');
-        card.className = 'community-card';
-        card.innerHTML = `
-          <div>
-            <div style="font-weight:700">${escapeHtml(c.name)}</div>
-            <div class="muted">${c.distance_km != null ? c.distance_km + ' km away' : ''}</div>
-            <div class="muted" style="font-size:0.9rem">lat ${c.latitude} · lon ${c.longitude}</div>
-          </div>
-          <div style="text-align:right; min-width:220px;">
-            ${c.avg_shortwave_W_m2 != null ? `<div class="muted" style="font-size:0.9rem">Avg shortwave</div><div class="metric">${Number(c.avg_shortwave_W_m2).toFixed(1)} W/m²</div>` : `<div class="muted">No shortwave data</div>`}
-            ${c.avg_windspeed_m_s != null ? `<div class="muted" style="font-size:0.9rem;margin-top:0.35rem">Avg windspeed</div><div class="metric">${Number(c.avg_windspeed_m_s).toFixed(2)} m/s</div>` : ''}
-            ${c.data_points != null ? `<div class="muted" style="margin-top:0.35rem">Data points: ${c.data_points}</div>` : ''}
-          </div>
-        `;
-        communityList.appendChild(card);
-      }
+      // set calculator default
+      document.getElementById('monthlyKwh').value = Math.round(hh_kwh/12) || 200;
+      document.getElementById('calcResult').textContent = '';
+      document.getElementById('calcBtn').onclick = () => {
+        const monthly = Number(document.getElementById('monthlyKwh').value) || 0;
+        const annual = monthly * 12;
+        const co2kg = annual * ef;
+        document.getElementById('calcResult').innerHTML = `<strong>${annual.toLocaleString()} kWh / yr</strong> → <strong>${co2kg.toFixed(1)} kg CO₂ / yr</strong>`;
+      };
     }
 
     function escapeHtml(s){ return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 
-    // initial load
-    loadFromBackend();
+    loadEmissions();
   </script>
 </body>
 </html>
