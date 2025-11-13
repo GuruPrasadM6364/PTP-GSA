@@ -19,19 +19,19 @@ DB_URL = "sqlite:///renewable.db"
 
 
 def list_regions(engine_url: str = DB_URL) -> None:
-	engine = create_engine(engine_url, future=True)
-	with Session(engine) as session:
-		rows = session.query(Region).order_by(Region.region_type, Region.name).all()
-		for r in rows:
-			print(r)
+    engine = create_engine(engine_url, future=True)
+    with Session(engine) as session:
+        rows = session.query(Region).order_by(Region.region_type, Region.name).all()
+        for r in rows:
+            print(r)
 
 
 def list_projects(engine_url: str = DB_URL) -> None:
-	engine = create_engine(engine_url, future=True)
-	with Session(engine) as session:
-		rows = session.query(Project).order_by(Project.name).all()
-		for p in rows:
-			print(p)
+    engine = create_engine(engine_url, future=True)
+    with Session(engine) as session:
+        rows = session.query(Project).order_by(Project.name).all()
+        for p in rows:
+            print(p)
 
 
 def main():
