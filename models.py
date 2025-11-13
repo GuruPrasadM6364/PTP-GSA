@@ -118,3 +118,18 @@ class Report(Base):
 
     def __repr__(self) -> str:
         return f"<Report id={self.id} reporter={self.reporter} created_at={self.created_at}>"
+
+
+class User(Base):
+    __tablename__ = "users"
+    id: int = Column(Integer, primary_key=True)
+    name: str = Column(String(200), nullable=False)
+    phone: str = Column(String(10), nullable=False, unique=True)
+    pincode: str = Column(String(6), nullable=False)
+    address: str = Column(String(500), nullable=False)
+    created_at: datetime = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (UniqueConstraint("phone", name="u_phone"),)
+
+    def __repr__(self) -> str:
+        return f"<User id={self.id} name='{self.name}' phone={self.phone} pincode={self.pincode}>"
