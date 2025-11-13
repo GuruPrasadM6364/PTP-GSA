@@ -1,5 +1,5 @@
 Project **SUSTAINLY**:
-
+https://guruprasadm6364.github.io/PTP-GSA/landing.html
 *TRACKING CARBON EMISSIONS AND ENCOURAGING USAGE OF RENEWABLE RESOURCE ENERGY*
 
 - Perplexity AI and Google were used to find out the data and analytics related to the problem statement, in order to help understand it better.
