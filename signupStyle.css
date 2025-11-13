@@ -1,0 +1,85 @@
+/* Styles adapted from styles.css for the signup page */
+body {
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  background: linear-gradient(135deg, #e0f7fa, #c8e6c9);
+  color: #333;
+  margin: 0;
+  padding: 0;
+}
+nav {
+  background: #009688;
+  padding: 1rem;
+  color: #fff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.hero {
+  text-align: center;
+  padding: 2rem 1rem;
+  background: #fff8e1;
+}
+h1 {
+  font-size: 2rem;
+  margin: 0.25rem 0 0.5rem 0;
+  color: #2e7d32;
+}
+.lower-ledge {
+  background: #ffffff;
+  border-radius: 12px;
+  max-width: 720px;
+  margin: 2rem auto;
+  padding: 1.25rem;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+}
+.panel {
+  background: #f1f8e9;
+  border-radius: 10px;
+  padding: 1rem;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+}
+.panel h3 { margin-top: 0; color: #2e7d32; }
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+}
+input[type="text"],
+input[type="email"],
+input[type="password"],
+textarea {
+  padding: 0.6rem;
+  border-radius: 6px;
+  border: 1px solid #cfd8dc;
+  font-size: 0.95rem;
+  width: 100%;
+  box-sizing: border-box;
+  background: #fff;
+}
+textarea { min-height: 100px; resize: vertical; }
+.btn {
+  background: #388e3c;
+  color: #fff;
+  text-decoration: none;
+  padding: 0.75rem 1.25rem;
+  border-radius: 12px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  border: none;
+  cursor: pointer;
+}
+.btn:hover { background: #00695c; }
+footer {
+  text-align: center;
+  padding: 1.2rem;
+  background: #eee;
+  font-size: 0.9rem;
+  margin-top: 2rem;
+  color: #424242;
+}
+/* small screens */
+@media (max-width: 520px) {
+  .lower-ledge { margin: 1rem; padding: 0.9rem; }
+  .hero { padding: 1.2rem 0.6rem; }
+}
