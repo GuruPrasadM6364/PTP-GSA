@@ -11,7 +11,7 @@ Commands:
 This file uses the ORM in `models.py` and the helper in `db_init.py`.
 """
 import argparse
-from flask import Flask, render_template_string, request, jsonify, send_file
+from flask import Flask, render_template_string, request, jsonify, send_file, send_from_directory
 from sqlalchemy import create_engine # type: ignore
 from sqlalchemy.orm import Session # pyright: ignore[reportMissingImports]
 from models import Region, Project, CarbonMetric, Measurement, Target, Report, Base, User, Application
@@ -194,7 +194,9 @@ app = Flask(__name__)
 @app.route('/static/<path:filename>')
 def serve_static(filename):
     """Serve static files from project root."""
-    return send_file(os.path.join(os.path.dirname(__file__), filename))
+    # Serve files from the `static` directory so HTML pages can use `/static/...` paths.
+    static_dir = os.path.join(os.path.dirname(__file__), 'static')
+    return send_from_directory(static_dir, filename)
 
 
 def load_html_template():
@@ -360,219 +362,12 @@ def carbon_calculator_page():
 
 @app.route('/impact-visualization.html')
 def impact_visualization_page():
-    """Serve impact visualization page with savings calculator."""
-    html_content = """
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8" />
-      <title>Impact Visualization - Renewable Energy Tracker</title>
-      <meta name="viewport" content="width=device-width, initial-scale=1" />
-      <link rel="stylesheet" href="/static/styles.css" />
-      <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-      <style>
-        body { font-family: Arial, sans-serif; padding: 20px; max-width: 1000px; margin: auto; background: #f5f5f5; }
-        .impact-container { background: white; border-radius: 12px; padding: 2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        h1 { color: #2e7d32; text-align: center; margin-bottom: 1.5rem; }
-        .form-section { background: #f1f8e9; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; }
-        .month-input { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; padding: 1rem; background: white; border-radius: 6px; border: 1px solid #cfd8dc; }
-        .month-input input { padding: 0.6rem; border: 1px solid #cfd8dc; border-radius: 4px; font-size: 14px; }
-        .month-input input:focus { outline: none; border-color: #388e3c; }
-        .add-btn { padding: 0.6rem 1.2rem; background: #388e3c; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
-        .add-btn:hover { background: #2e7d32; }
-        .calc-btn { padding: 1rem 2rem; background: #1976d2; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; width: 100%; }
-        .calc-btn:hover { background: #1565c0; }
-        .results-section { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2rem; }
-        .result-card { background: #e8f5e9; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #388e3c; text-align: center; }
-        .result-card h3 { color: #2e7d32; margin-bottom: 0.5rem; }
-        .result-value { font-size: 28px; font-weight: bold; color: #d32f2f; }
-        .chart-container { background: white; padding: 2rem; border-radius: 8px; margin-top: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .back-btn { display: inline-block; margin-bottom: 1rem; padding: 0.6rem 1.2rem; background: #666; color: white; text-decoration: none; border-radius: 6px; }
-        .back-btn:hover { background: #555; }
-        .months-list { max-height: 300px; overflow-y: auto; background: white; padding: 1rem; border-radius: 6px; margin-top: 1rem; }
-        .month-item { display: flex; justify-content: space-between; padding: 0.8rem; border-bottom: 1px solid #eee; }
-        .month-item .remove-btn { background: #d32f2f; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; font-size: 12px; }
-      </style>
-    </head>
-    <body>
-      <a href="/" class="back-btn">← Back to Home</a>
-      
-      <div class="impact-container">
-        <h1>🌍 Impact Visualization & Carbon Savings</h1>
-        
-        <div class="form-section">
-          <h3 style="color: #2e7d32; margin-bottom: 1rem;">📊 Track Your Electricity Usage</h3>
-          
-          <div class="month-input">
-            <div>
-              <label>Month Name</label>
-              <input type="text" id="monthName" placeholder="e.g., January" />
-            </div>
-            <div>
-              <label>Units (kWh)</label>
-              <input type="number" id="monthUnits" placeholder="e.g., 150" min="0" step="0.1" />
-            </div>
-          </div>
-          
-          <button class="add-btn" onclick="addMonth()">+ Add Month</button>
-          
-          <div class="months-list" id="monthsList" style="display:none;">
-            <h4>Added Months:</h4>
-            <div id="monthsContainer"></div>
-          </div>
-          
-          <button class="calc-btn" onclick="calculateImpact()" style="margin-top: 1rem;">🔥 Calculate Impact & Savings</button>
-        </div>
-        
-        <div id="resultsDiv" style="display: none;">
-          <div class="results-section">
-            <div class="result-card">
-              <h3>💨 CO₂ Reduction</h3>
-              <div class="result-value" id="co2Saving">0</div>
-              <p>kg CO₂ saved per year</p>
-            </div>
-            <div class="result-card">
-              <h3>💰 Cost Savings</h3>
-              <div class="result-value" id="costSaving">₹0</div>
-              <p>saved per year with renewable energy</p>
-            </div>
-          </div>
-          
-          <div class="chart-container">
-            <canvas id="impactChart"></canvas>
-          </div>
-        </div>
-      </div>
-      
-      <script>
-        let monthsData = [];
-        let chart = null;
-        
-        function addMonth() {
-          const name = document.getElementById('monthName').value.trim();
-          const units = parseFloat(document.getElementById('monthUnits').value);
-          
-          if (!name || isNaN(units) || units < 0) {
-            alert('Please enter valid month name and units');
-            return;
-          }
-          
-          monthsData.push({ name, units });
-          document.getElementById('monthName').value = '';
-          document.getElementById('monthUnits').value = '';
-          
-          displayMonths();
-        }
-        
-        function displayMonths() {
-          const list = document.getElementById('monthsList');
-          const container = document.getElementById('monthsContainer');
-          
-          if (monthsData.length === 0) {
-            list.style.display = 'none';
-            return;
-          }
-          
-          list.style.display = 'block';
-          container.innerHTML = monthsData.map((m, i) => `
-            <div class="month-item">
-              <span>${m.name}: ${m.units} kWh</span>
-              <button class="remove-btn" onclick="removeMonth(${i})">Remove</button>
-            </div>
-          `).join('');
-        }
-        
-        function removeMonth(index) {
-          monthsData.splice(index, 1);
-          displayMonths();
-        }
-        
-        function calculateImpact() {
-          if (monthsData.length === 0) {
-            alert('Please add at least one month of data');
-            return;
-          }
-          
-          const emissionFactor = 0.85;
-          const renewableFactor = 0.05;
-          const costPerUnit = 7.0;
-          const renewableCostPerUnit = 2.5;
-          
-          let gridCO2 = 0, renewableCO2 = 0, gridCost = 0, renewableCost = 0;
-          const labels = [];
-          const gridData = [];
-          const renewableData = [];
-          
-          monthsData.forEach(m => {
-            const gco2 = m.units * emissionFactor;
-            const rco2 = m.units * renewableFactor;
-            
-            gridCO2 += gco2;
-            renewableCO2 += rco2;
-            gridCost += m.units * costPerUnit;
-            renewableCost += m.units * renewableCostPerUnit;
-            
-            labels.push(m.name);
-            gridData.push(gco2.toFixed(2));
-            renewableData.push(rco2.toFixed(2));
-          });
-          
-          const co2Saving = (gridCO2 - renewableCO2).toFixed(2);
-          const costSaving = (gridCost - renewableCost).toFixed(2);
-          
-          document.getElementById('co2Saving').textContent = co2Saving;
-          document.getElementById('costSaving').textContent = '₹' + costSaving;
-          document.getElementById('resultsDiv').style.display = 'block';
-          
-          drawChart(labels, gridData, renewableData);
-        }
-        
-        function drawChart(labels, gridData, renewableData) {
-          const ctx = document.getElementById('impactChart').getContext('2d');
-          
-          if (chart) chart.destroy();
-          
-          chart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-              labels: labels,
-              datasets: [
-                {
-                  label: 'Grid CO₂ (kg)',
-                  data: gridData,
-                  backgroundColor: '#d32f2f',
-                  borderRadius: 4
-                },
-                {
-                  label: 'Renewable CO₂ (kg)',
-                  data: renewableData,
-                  backgroundColor: '#388e3c',
-                  borderRadius: 4
-                }
-              ]
-            },
-            options: {
-              responsive: true,
-              plugins: {
-                title: {
-                  display: true,
-                  text: 'CO₂ Emissions: Grid vs Renewable Energy'
-                }
-              },
-              scales: {
-                y: {
-                  beginAtZero: true,
-                  title: { display: true, text: 'CO₂ (kg)' }
-                }
-              }
-            }
-          });
-        }
-      </script>
-    </body>
-    </html>
-    """
-    return html_content
+    """Serve the `impact-visualization.html` file from disk so it uses the external CSS/JS."""
+    html_path = os.path.join(os.path.dirname(__file__), 'impact-visualization.html')
+    if os.path.exists(html_path):
+        with open(html_path, 'r', encoding='utf-8') as f:
+            return f.read()
+    return "<h1>Impact Visualization page not found</h1>"
 
 
 @app.route('/community-comparison.html')
