@@ -1,4 +1,9 @@
 import re
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
+from models import User
+
+DB_URL = "sqlite:///renewable.db"
 
 def validate_phone(phone):
     """Validate 10-digit phone number"""
@@ -69,5 +74,18 @@ if __name__ == "__main__":
     user_info = get_user_info()
     display_user_info(user_info)
     
-    # You can save to file, database, or process further
-    print("\n✅ Information collected successfully!")
+    # Save to database
+    try:
+        engine = create_engine(DB_URL, future=True)
+        with Session(engine) as session:
+            user = User(
+                name=user_info['name'],
+                phone=user_info['phone'],
+                pincode=user_info['pincode'],
+                address=user_info['address']
+            )
+            session.add(user)
+            session.commit()
+            print(f"\n✅ User information saved to database with ID: {user.id}")
+    except Exception as e:
+        print(f"\n❌ Error saving to database: {str(e)}")

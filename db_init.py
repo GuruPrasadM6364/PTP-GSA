@@ -6,7 +6,7 @@ and inserts a few sample regions, projects, measurements, carbon metrics, and ta
 from datetime import date, datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
-from models import Base, Region, Project, Measurement, CarbonMetric, Target, Report
+from models import Base, Region, Project, Measurement, CarbonMetric, Target, Report, User
 
 
 DB_URL = "sqlite:///renewable.db"
