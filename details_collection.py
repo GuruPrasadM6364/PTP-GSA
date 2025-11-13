@@ -7,7 +7,7 @@ def validate_phone(phone):
 
 def validate_pincode(pincode):
     """Validate 6-digit pincode"""
-    pattern = r'^\d{6}
+    pattern = r'^\d{6}'
 
 def get_user_info():
     """Collect user information with validation"""
@@ -83,7 +83,7 @@ if __name__ == "__main__":
 
 def validate_email(email):
     """Validate email address"""
-    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
 
 def get_user_info():
     """Collect user information with validation"""
