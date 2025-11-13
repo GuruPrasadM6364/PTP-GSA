@@ -22,6 +22,20 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 
 
+def get_ai_suggestion(units, co2):
+    """AI suggestion system for energy-saving tips based on usage and emissions."""
+    if units <= 50:
+        return "🌿 Excellent! Your consumption is very low. Keep it up by continuing to use efficient LED bulbs and solar charging devices."
+    elif units <= 150:
+        return "⚙️ Moderate consumption detected. Consider unplugging idle electronics and using smart power strips to reduce standby losses."
+    elif units <= 300:
+        return "⚡ Your electricity usage is on the higher side. Try scheduling high-power tasks during off-peak hours, and switch to inverter-based appliances."
+    elif units <= 600:
+        return "🔥 Heavy usage! You might benefit from a partial solar panel setup to offset your grid use. Monitor your cooling/heating appliances — they're often major contributors."
+    else:
+        return "🚨 Very high energy usage detected! Consider a full renewable energy plan or energy audit. Switching to solar or wind power could reduce over 70% of your CO₂ emissions."
+
+
 def validate_phone(phone):
     """Validate 10-digit phone number"""
     pattern = r'^[6-9]\d{9}$'
@@ -197,6 +211,111 @@ def live_data_tracking_page():
         with open(html_path, 'r') as f:
             return f.read()
     return "<h1>Live Data Tracking page not found</h1>"
+
+
+@app.route('/carbon-calculator')
+def carbon_calculator_page():
+    """Serve the carbon calculator page."""
+    html_content = """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8" />
+      <title>Carbon Calculator - Renewable Energy Tracker</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1" />
+      <link rel="stylesheet" href="/static/styles.css" />
+      <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 700px; margin: auto; }
+        .calculator-container { background: #f1f8e9; border-radius: 12px; padding: 2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .calculator-container h1 { color: #2e7d32; text-align: center; }
+        .form-group { margin-bottom: 1.5rem; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 0.5rem; color: #333; }
+        .form-group input { padding: 0.8rem; font-size: 16px; width: 100%; box-sizing: border-box; border: 1px solid #cfd8dc; border-radius: 6px; }
+        .form-group input:focus { outline: none; border-color: #388e3c; box-shadow: 0 0 6px rgba(56, 142, 60, 0.3); }
+        button { padding: 0.8rem 2rem; font-size: 16px; background: #388e3c; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; }
+        button:hover { background: #2e7d32; }
+        .result-container { margin-top: 2rem; padding: 1.5rem; background: #e8f5e9; border-radius: 8px; border-left: 4px solid #388e3c; display: none; }
+        .result-container.show { display: block; }
+        .consumption-text { font-size: 18px; font-weight: bold; color: #2e7d32; margin-bottom: 0.5rem; }
+        .emission-text { font-size: 18px; font-weight: bold; color: #d32f2f; margin-bottom: 1rem; }
+        .suggestion-text { font-size: 15px; line-height: 1.6; color: #555; }
+        .error { color: #b00020; text-align: center; margin-top: 1rem; }
+        .back-button { display: inline-block; margin-bottom: 1rem; padding: 0.6rem 1.2rem; background: #666; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; }
+        .back-button:hover { background: #555; }
+      </style>
+    </head>
+    <body>
+      <a href="/" class="back-button">← Back to Home</a>
+      
+      <div class="calculator-container">
+        <h1>⚡ Carbon Emission Calculator</h1>
+        <p style="text-align: center; color: #666; margin-bottom: 1.5rem;">Calculate your electricity consumption and CO₂ emissions</p>
+        
+        <form id="calculatorForm">
+          <div class="form-group">
+            <label for="units">Electricity Consumed (kWh)</label>
+            <input type="number" id="units" name="units" min="0" step="0.1" placeholder="Enter units consumed" required />
+          </div>
+          <button type="submit">Calculate CO₂ Emissions</button>
+        </form>
+        
+        <div id="resultContainer" class="result-container">
+          <div class="consumption-text">📊 You consumed <span id="consumedUnits">0</span> kWh of electricity</div>
+          <div class="emission-text">💨 Estimated CO₂ emitted: <span id="emissionValue">0</span> kg</div>
+          <div class="suggestion-text"><strong>🤖 AI Energy Advisor:</strong><br><span id="suggestion"></span></div>
+        </div>
+        
+        <div id="errorMsg" class="error"></div>
+      </div>
+      
+      <script>
+        const form = document.getElementById('calculatorForm');
+        const resultContainer = document.getElementById('resultContainer');
+        const errorMsg = document.getElementById('errorMsg');
+        
+        const suggestions = {
+          low: "🌿 Excellent! Your consumption is very low. Keep it up by continuing to use efficient LED bulbs and solar charging devices.",
+          moderate: "⚙️ Moderate consumption detected. Consider unplugging idle electronics and using smart power strips to reduce standby losses.",
+          medium: "⚡ Your electricity usage is on the higher side. Try scheduling high-power tasks during off-peak hours, and switch to inverter-based appliances.",
+          high: "🔥 Heavy usage! You might benefit from a partial solar panel setup to offset your grid use. Monitor your cooling/heating appliances — they're often major contributors.",
+          veryHigh: "🚨 Very high energy usage detected! Consider a full renewable energy plan or energy audit. Switching to solar or wind power could reduce over 70% of your CO₂ emissions."
+        };
+        
+        function getAISuggestion(units) {
+          if (units <= 50) return suggestions.low;
+          if (units <= 150) return suggestions.moderate;
+          if (units <= 300) return suggestions.medium;
+          if (units <= 600) return suggestions.high;
+          return suggestions.veryHigh;
+        }
+        
+        form.addEventListener('submit', (e) => {
+          e.preventDefault();
+          
+          const units = parseFloat(document.getElementById('units').value);
+          
+          if (isNaN(units) || units < 0) {
+            errorMsg.textContent = '❌ Please enter a valid number for electricity units';
+            resultContainer.classList.remove('show');
+            return;
+          }
+          
+          errorMsg.textContent = '';
+          
+          const emissionFactor = 0.85; // kg CO2 per kWh
+          const totalCO2 = (units * emissionFactor).toFixed(2);
+          
+          document.getElementById('consumedUnits').textContent = units.toFixed(2);
+          document.getElementById('emissionValue').textContent = totalCO2;
+          document.getElementById('suggestion').textContent = getAISuggestion(units);
+          
+          resultContainer.classList.add('show');
+        });
+      </script>
+    </body>
+    </html>
+    """
+    return html_content
 
 
 @app.route('/impact-visualization.html')
