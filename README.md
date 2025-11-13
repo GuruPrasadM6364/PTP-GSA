@@ -51,4 +51,5 @@ Project:
 
 - Claude AI used to create the backend for login and credentials
 
-- 
+- Flask and sqlAlchemy were used for databases and GitHub CoPilot was used to create and integrate them into the main pages.
+
