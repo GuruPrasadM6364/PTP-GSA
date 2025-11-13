@@ -1,4 +1,4 @@
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt # type: ignore
 
 def carbon_emission_calculator():
     print("=== 🌱 Electricity & Carbon Emission Savings Calculator ===\n")
