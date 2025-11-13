@@ -11,7 +11,7 @@ Commands:
 This file uses the ORM in `models.py` and the helper in `db_init.py`.
 """
 import argparse
-from flask import Flask, render_template_string, request, jsonify
+from flask import Flask, render_template_string, request, jsonify, send_file
 from sqlalchemy import create_engine # type: ignore
 from sqlalchemy.orm import Session # pyright: ignore[reportMissingImports]
 from models import Region, Project, CarbonMetric, Measurement, Target, Report, Base, User, Application
@@ -135,6 +135,12 @@ DB_URL = "sqlite:///renewable.db"
 
 # Initialize Flask app
 app = Flask(__name__)
+
+# Configure static files
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    """Serve static files from project root."""
+    return send_file(os.path.join(os.path.dirname(__file__), filename))
 
 
 def load_html_template():
