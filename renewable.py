@@ -14,11 +14,12 @@ import argparse
 from flask import Flask, render_template_string, request, jsonify
 from sqlalchemy import create_engine # type: ignore
 from sqlalchemy.orm import Session # pyright: ignore[reportMissingImports]
-from models import Region, Project, CarbonMetric, Measurement, Target, Report, Base, User
+from models import Region, Project, CarbonMetric, Measurement, Target, Report, Base, User, Application
 import db_init
 import os
 import re
 from werkzeug.security import generate_password_hash
+from datetime import datetime
 
 
 def validate_phone(phone):
@@ -172,6 +173,16 @@ def signup_page():
     return "<h1>Signup page not found</h1>"
 
 
+@app.route('/application')
+def application_page():
+    """Serve the application form HTML page."""
+    html_path = os.path.join(os.path.dirname(__file__), 'application.html')
+    if os.path.exists(html_path):
+        with open(html_path, 'r') as f:
+            return f.read()
+    return "<h1>Application form not found</h1>"
+
+
 @app.route('/api/regions')
 def api_regions():
     """API endpoint to get all regions."""
@@ -252,6 +263,51 @@ def api_submit_user():
                 'success': True,
                 'message': 'User information saved successfully',
                 'user_id': user.id
+            }), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/applications', methods=['POST'])
+def api_submit_application():
+    """API endpoint to submit an application."""
+    try:
+        data = request.get_json()
+        
+        # Validate required fields
+        if not all(key in data for key in ['name', 'phone', 'pincode', 'email', 'source']):
+            return jsonify({'error': 'Missing required fields'}), 400
+        
+        # Validate fields
+        if not validate_phone(data['phone']):
+            return jsonify({'error': 'Invalid phone number format'}), 400
+        
+        if not validate_pincode(data['pincode']):
+            return jsonify({'error': 'Invalid pincode format'}), 400
+        
+        if not validate_email(data['email']):
+            return jsonify({'error': 'Invalid email format'}), 400
+        
+        source = data['source']
+        if source not in ['Solar', 'Wind', 'Hydro']:
+            return jsonify({'error': 'Invalid renewable source'}), 400
+        
+        # Save to database
+        engine = create_engine(DB_URL, future=True)
+        with Session(engine) as session:
+            application = Application(
+                name=data['name'],
+                phone=data['phone'],
+                pincode=data['pincode'],
+                email=data['email'],
+                source=source
+            )
+            session.add(application)
+            session.commit()
+            return jsonify({
+                'success': True,
+                'message': 'Application submitted successfully!',
+                'application_id': application.id
             }), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 500
