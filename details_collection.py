@@ -14,6 +14,19 @@ def validate_email(email):
     """Validate email address"""
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return bool(re.match(pattern, email))
+def validate_password(password):
+    """Validate password (min 8 chars, at least 1 uppercase, 1 lowercase, 1 digit, 1 special char)"""
+    if len(password) < 8:
+        return False, "Password must be at least 8 characters long."
+    if not re.search(r'[A-Z]', password):
+        return False, "Password must contain at least one uppercase letter."
+    if not re.search(r'[a-z]', password):
+        return False, "Password must contain at least one lowercase letter."
+    if not re.search(r'\d', password):
+        return False, "Password must contain at least one digit."
+    if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+        return False, "Password must contain at least one special character."
+    return True, "Valid password"
 
 def get_user_info():
     """Collect user information with validation"""
@@ -41,6 +54,14 @@ def get_user_info():
         if validate_email(email):
             break
         print("❌ Invalid email address. Please enter a valid email (e.g., user@example.com).")
+        # Collect Password
+        while True:
+            password = input("Enter Password (min 8 chars, 1 uppercase, 1 lowercase, 1 digit, 1 special char): ").strip()
+            is_valid, message = validate_password(password)
+            if is_valid:
+                break
+            print(f"❌ {message}")
+    
     
     # Collect Pincode
     while True:
@@ -62,7 +83,8 @@ def get_user_info():
         'phone': phone,
         'email': email,
         'pincode': pincode,
-        'address': address
+        'address': address,
+        'password': password,
     }
     
     return user_data
@@ -77,6 +99,7 @@ def display_user_info(user_data):
     print(f"Email:    {user_data['email']}")
     print(f"Pincode:  {user_data['pincode']}")
     print(f"Address:  {user_data['address']}")
+    print(f"Password: {'*' * len(user_data['password'])}")
     print("=" * 50)
 
 if __name__ == "__main__":
