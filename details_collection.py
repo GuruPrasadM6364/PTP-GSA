@@ -33,7 +33,7 @@ def get_user_info():
         phone = input("Enter Phone Number (10 digits): ").strip()
         if validate_phone(phone):
             break
-        print("❌ Invalid phone number. Please enter a valid 10-digit number starting with 6-9.")
+        print("❌ Invalid phone number. Please enter a valid 10-digit number.")
     
     # Collect Pincode
     while True:
