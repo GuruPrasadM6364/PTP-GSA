@@ -45,10 +45,11 @@
   <!-- lower ledge: signup/login and compact status button above panels. -->
   <div class="lower-ledge" id="apply">
     <div class="auth-row" aria-hidden="false">
-      <button class="btn" onclick="location.href='login.html'">Sign Up</button>
+      <!-- direct links to separate pages -->
+      <button class="btn" onclick="location.href='signup.html'">Sign Up</button>
       <button class="btn" onclick="location.href='login.html'">Log In</button>
       <!-- compact status button matching signup/login style -->
-      <button class="btn" onclick="checkStatusPrompt()">Check Status</button>
+      <button class="btn" onclick="handleCheckStatus()">Check Status</button>
     </div>
 
     <div class="panels">
@@ -61,10 +62,15 @@
     &copy; 2025 Renewable Energy Tracker. Made for a cleaner planet.
   </footer>
 
-  <script src="login.js" >
-    </script>
-    <script src="signup.js" >
-      
-    </script>
+  <script>
+    function handleCheckStatus() {
+      if (typeof checkStatusPrompt === 'function') {
+        return checkStatusPrompt();
+      }
+      var id = prompt('Enter your Application ID (e.g. APP-1234):');
+      if (!id) return;
+      alert('Status for ' + id + ': (placeholder) In review');
+    }
+  </script>
 </body>
 </html>
