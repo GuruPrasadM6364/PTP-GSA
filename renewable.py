@@ -9,8 +9,8 @@ Commands:
 This file uses the ORM in `models.py` and the helper in `db_init.py`.
 """
 import argparse
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
+from sqlalchemy import create_engine # type: ignore
+from sqlalchemy.orm import Session # pyright: ignore[reportMissingImports]
 from models import Region, Project, CarbonMetric, Measurement, Target, Report, Base
 import db_init
 
