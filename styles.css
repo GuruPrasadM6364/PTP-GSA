@@ -73,14 +73,19 @@ body {
     /* smaller button sizing for feature buttons (uniform for all four) */
     .feature .btn {
       width: 100%;
-      padding: 0.6rem 0.8rem;
+      padding: 0.9rem 1rem;       /* increased padding for taller buttons */
       border-radius: 12px;
       font-weight: 700;
-      font-size: 0.95rem;
+      font-size: 0.98rem;
       margin-bottom: 0.6rem;
-      white-space: nowrap;
+      white-space: normal;        /* allow wrapping when needed */
       overflow: hidden;
       text-overflow: ellipsis;
+      min-height: 52px;          /* ensure consistent minimum height */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.25rem;
     }
     .feature-desc {
       text-align: center;
