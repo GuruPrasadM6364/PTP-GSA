@@ -125,11 +125,16 @@ class User(Base):
     id: int = Column(Integer, primary_key=True)
     name: str = Column(String(200), nullable=False)
     phone: str = Column(String(10), nullable=False, unique=True)
+    email: Optional[str] = Column(String(200), nullable=True)
+    password_hash: Optional[str] = Column(String(128), nullable=True)
     pincode: str = Column(String(6), nullable=False)
     address: str = Column(String(500), nullable=False)
     created_at: datetime = Column(DateTime, default=datetime.utcnow)
 
-    __table_args__ = (UniqueConstraint("phone", name="u_phone"),)
+    __table_args__ = (
+        UniqueConstraint("phone", name="u_phone"),
+        UniqueConstraint("email", name="u_email"),
+    )
 
     def __repr__(self) -> str:
         return f"<User id={self.id} name='{self.name}' phone={self.phone} pincode={self.pincode}>"
