@@ -5,13 +5,146 @@
   <title>Community Comparison — Renewable Energy Tracker</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link rel="stylesheet" href="styles.css" />
+  <style>
+    .container { max-width: 960px; margin: 1.25rem auto; padding: 0 1rem; }
+    .summary { display:flex; gap:1rem; flex-wrap:wrap; align-items:center; margin-bottom:1rem; }
+    .summary .panel { flex: 1 1 320px; }
+    .list { display:flex; flex-direction:column; gap:0.75rem; }
+    .community-card { background:#fff; border-radius:10px; padding:0.9rem; box-shadow:0 2px 6px rgba(0,0,0,0.04); display:flex; justify-content:space-between; align-items:center; gap:1rem; }
+    .metric { font-weight:700; color:#2e7d32; }
+    .muted { color:#666; font-size:0.95rem; }
+  </style>
 </head>
 <body>
   <nav><span style="font-weight:bold;">Community Comparison</span></nav>
-  <main style="padding:1.5rem;">
-    <h1>Community Comparison</h1>
-    <p>Placeholder page — compare usage and savings with nearby communities.</p>
-    <p><a class="btn" href="landing.html">Back to Home</a></p>
+
+  <main class="container">
+    <div class="panel">
+      <h1>Community Comparison</h1>
+      <p class="muted">We detect your approximate location from your IP (server-side) and fetch recent measured solar & wind metrics from Open‑Meteo for your area and nearby points. This page uses a small backend service (server.py) to perform IP lookup and API requests.</p>
+    </div>
+
+    <div class="summary" id="locationSummary">
+      <div class="panel">
+        <h3>Your Location</h3>
+        <div id="locStatus">Detecting location from IP…</div>
+      </div>
+
+      <div class="panel">
+        <h3>Quick Actions</h3>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+          <button class="btn" id="refreshBtn">Refresh</button>
+          <button class="btn" id="manualBtn">Enter location manually</button>
+          <a class="btn" href="landing.html">Back to Home</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Nearby Community Comparison (recent 7 days)</h3>
+      <div id="communityList" class="list">
+        <div class="muted">Awaiting results…</div>
+      </div>
+      <div id="note" class="muted" style="margin-top:0.75rem;"></div>
+    </div>
   </main>
+
+  <script>
+    const locStatus = document.getElementById('locStatus');
+    const communityList = document.getElementById('communityList');
+    const note = document.getElementById('note');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const manualBtn = document.getElementById('manualBtn');
+
+    refreshBtn.addEventListener('click', () => loadFromBackend());
+    manualBtn.addEventListener('click', async () => {
+      const place = prompt('Enter city, region or "lat,lon" (e.g. 12.9716,77.5946):');
+      if (!place) return;
+      // If user supplies lat,lon, call backend with lat/lon query parameters
+      const parts = place.split(',').map(p => p.trim());
+      if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+        const lat = parseFloat(parts[0]), lon = parseFloat(parts[1]);
+        loadFromBackend(lat, lon);
+      } else {
+        // try to geocode client-side via nominatim then call backend with lat/lon
+        try {
+          locStatus.textContent = 'Geocoding…';
+          const q = encodeURIComponent(place);
+          const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`);
+          const arr = await r.json();
+          if (arr && arr.length) {
+            const lat = parseFloat(arr[0].lat), lon = parseFloat(arr[0].lon);
+            loadFromBackend(lat, lon);
+          } else {
+            locStatus.textContent = 'Could not geocode input.';
+          }
+        } catch (err) {
+          locStatus.textContent = 'Geocoding failed.';
+        }
+      }
+    });
+
+    async function loadFromBackend(lat=null, lon=null) {
+      communityList.innerHTML = '<div class="muted">Loading nearby community stats…</div>';
+      note.textContent = '';
+      locStatus.textContent = 'Detecting location from IP (server)…';
+      try {
+        const params = lat !== null && lon !== null ? `?lat=${lat}&lon=${lon}` : '';
+        const resp = await fetch(`/api/community${params}`);
+        if (!resp.ok) throw new Error('backend error');
+        const data = await resp.json();
+        renderLocation(data.detected);
+        renderCommunities(data.communities, data.period);
+        note.textContent = 'Data sourced from ipapi.co (IP -> location) and Open‑Meteo (measured solar & wind).';
+      } catch (err) {
+        communityList.innerHTML = '<div class="muted">Failed to load community data (see console).</div>';
+        locStatus.textContent = 'Detection failed.';
+        console.error(err);
+      }
+    }
+
+    function renderLocation(d) {
+      if (!d) { locStatus.textContent = 'Location not available'; return; }
+      locStatus.innerHTML = `
+        <div><strong>${escapeHtml(d.city || '—')}</strong> ${d.region ? '· ' + escapeHtml(d.region) : ''} ${d.country ? '· ' + escapeHtml(d.country) : ''}</div>
+        <div class="muted">Lat: ${Number(d.latitude).toFixed(4)} · Lon: ${Number(d.longitude).toFixed(4)}</div>
+      `;
+    }
+
+    function renderCommunities(list, period) {
+      communityList.innerHTML = '';
+      if (!Array.isArray(list) || !list.length) {
+        communityList.innerHTML = '<div class="muted">No nearby data found.</div>';
+        return;
+      }
+      const p = document.createElement('div');
+      p.className = 'muted';
+      p.textContent = `Period: ${escapeHtml(period.start_date)} → ${escapeHtml(period.end_date)}`;
+      communityList.appendChild(p);
+
+      for (const c of list) {
+        const card = document.createElement('div');
+        card.className = 'community-card';
+        card.innerHTML = `
+          <div>
+            <div style="font-weight:700">${escapeHtml(c.name)}</div>
+            <div class="muted">${c.distance_km != null ? c.distance_km + ' km away' : ''}</div>
+            <div class="muted" style="font-size:0.9rem">lat ${c.latitude} · lon ${c.longitude}</div>
+          </div>
+          <div style="text-align:right; min-width:220px;">
+            ${c.avg_shortwave_W_m2 != null ? `<div class="muted" style="font-size:0.9rem">Avg shortwave</div><div class="metric">${Number(c.avg_shortwave_W_m2).toFixed(1)} W/m²</div>` : `<div class="muted">No shortwave data</div>`}
+            ${c.avg_windspeed_m_s != null ? `<div class="muted" style="font-size:0.9rem;margin-top:0.35rem">Avg windspeed</div><div class="metric">${Number(c.avg_windspeed_m_s).toFixed(2)} m/s</div>` : ''}
+            ${c.data_points != null ? `<div class="muted" style="margin-top:0.35rem">Data points: ${c.data_points}</div>` : ''}
+          </div>
+        `;
+        communityList.appendChild(card);
+      }
+    }
+
+    function escapeHtml(s){ return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+    // initial load
+    loadFromBackend();
+  </script>
 </body>
 </html>
