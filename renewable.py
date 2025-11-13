@@ -7,6 +7,7 @@ Commands:
   list-projects: list projects
   serve      : run web server to view landing page
   collect-user-info: collect user information interactively
+  predict    : run the predictive renewable adoption model (plot)
 
 This file uses the ORM in `models.py` and the helper in `db_init.py`.
 """
@@ -20,6 +21,7 @@ import os
 import re
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
+import predective
 
 
 def get_ai_suggestion(units, co2):
@@ -633,6 +635,12 @@ def main():
                 print(f"\n✅ User information saved to database with ID: {user.id}")
         except Exception as e:
             print(f"\n❌ Error saving to database: {str(e)}")
+    elif args.command == "predict":
+        # Run the predictive model and show plots (this will open a matplotlib window in a GUI environment)
+        try:
+            predective.auto_renewable_prediction()
+        except Exception as e:
+            print(f"❌ Error running predictive model: {e}")
 
 
 if __name__ == "__main__":
