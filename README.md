@@ -1,5 +1,7 @@
 Project **SUSTAINLY**:
 
+*TRACKING CARBON EMISSIONS AND ENCOURAGING USAGE OF RENEWABLE RESOURCE ENERGY*
+
 - Perplexity AI and Google were used to find out the data and analytics related to the problem statement, in order to help understand it better.
 
 - Claude AI used to create the backend for login and credentials
@@ -21,3 +23,4 @@ Features of our APP:
 - Community Comparison: Using live location tracking to show carbon emissions in the region.
 
 - Insights and Trends: Suggesting tips to reduce carbon emissions and increase renewable resource consumption.
+
