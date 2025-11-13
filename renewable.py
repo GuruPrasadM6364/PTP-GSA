@@ -11,14 +11,14 @@ Commands:
 This file uses the ORM in `models.py` and the helper in `db_init.py`.
 """
 import argparse
-from flask import Flask, render_template_string, request, jsonify
+from flask import Flask, render_template_string, request, jsonify, send_file
 from sqlalchemy import create_engine # type: ignore
 from sqlalchemy.orm import Session # pyright: ignore[reportMissingImports]
 from models import Region, Project, CarbonMetric, Measurement, Target, Report, Base, User, Application
 import db_init
 import os
 import re
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 
 
@@ -136,6 +136,12 @@ DB_URL = "sqlite:///renewable.db"
 # Initialize Flask app
 app = Flask(__name__)
 
+# Configure static files
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    """Serve static files from project root."""
+    return send_file(os.path.join(os.path.dirname(__file__), filename))
+
 
 def load_html_template():
     """Load the landing.html file."""
@@ -217,6 +223,63 @@ def api_get_users():
             'address': u.address,
             'created_at': u.created_at.isoformat()
         } for u in rows])
+
+
+@app.route('/api/auth/login', methods=['POST'])
+def api_login():
+    """API endpoint for user login with email or phone."""
+    try:
+        data = request.get_json()
+        
+        # Validate required fields
+        if not all(key in data for key in ['identifier', 'password', 'login_method']):
+            return jsonify({'error': 'Missing required fields'}), 400
+        
+        identifier = data.get('identifier', '').strip()
+        password = data.get('password', '')
+        login_method = data.get('login_method')
+
+        if login_method not in ['email', 'phone']:
+            return jsonify({'error': 'Invalid login method'}), 400
+
+        if not identifier or not password:
+            return jsonify({'error': 'Identifier and password are required'}), 400
+
+        # Validate identifier format
+        if login_method == 'email':
+            if not validate_email(identifier):
+                return jsonify({'error': 'Invalid email format'}), 400
+        elif login_method == 'phone':
+            if not validate_phone(identifier):
+                return jsonify({'error': 'Invalid phone format'}), 400
+
+        # Find user by email or phone
+        engine = create_engine(DB_URL, future=True)
+        with Session(engine) as session:
+            if login_method == 'email':
+                user = session.query(User).filter(User.email == identifier).first()
+                if not user:
+                    return jsonify({'error': 'User not found with this email'}), 401
+            else:  # phone
+                user = session.query(User).filter(User.phone == identifier).first()
+                if not user:
+                    return jsonify({'error': 'User not found with this phone number'}), 401
+
+            # Verify password
+            if not user.password_hash or not check_password_hash(user.password_hash, password):
+                return jsonify({'error': 'Invalid password'}), 401
+
+            # Successful login
+            return jsonify({
+                'success': True,
+                'message': f'Login successful! Welcome, {user.name}',
+                'user_id': user.id,
+                'user_name': user.name,
+                'user_email': user.email,
+                'user_phone': user.phone
+            }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/users', methods=['POST'])
