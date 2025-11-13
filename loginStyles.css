@@ -1,0 +1,16 @@
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: auto; }
+    .login-container { background: #f1f8e9; border-radius: 12px; padding: 2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .login-container h1 { color: #2e7d32; text-align: center; }
+    .form-group { margin-bottom: 1.2rem; }
+    .form-group label { display: block; font-weight: bold; margin-bottom: 0.4rem; }
+    .form-group input { padding: 0.6rem; font-size: 14px; width: 100%; box-sizing: border-box; border: 1px solid #cfd8dc; border-radius: 6px; }
+    .form-group input:focus { outline: none; border-color: #388e3c; box-shadow: 0 0 4px rgba(56, 142, 60, 0.3); }
+    .radio-group { display: flex; gap: 2rem; margin-bottom: 1.5rem; }
+    .radio-group label { display: inline-flex; align-items: center; font-weight: normal; margin-bottom: 0; }
+    .radio-group input[type="radio"] { margin-right: 0.5rem; }
+    .hidden { display: none; }
+    .error { color: #b00020; font-size: 13px; margin-top: 0.3rem; }
+    .success { color: #007700; font-size: 14px; }
+    button { padding: 0.8rem 1.5rem; font-size: 15px; background: #388e3c; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+    button:hover { background: #2e7d32; }
+    #result { margin-top: 1rem; padding: 0.8rem; border-radius: 6px; text-align: center; }
