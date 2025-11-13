@@ -38,7 +38,7 @@
       gap: 1rem;
       flex-wrap: wrap;
     }
-    .cta a {
+    .cta a, .btn {
       background: #388e3c;
       color: #fff;
       text-decoration: none;
@@ -48,8 +48,10 @@
       letter-spacing: 1.5px;
       display: inline-block;
       transition: background 0.2s;
+      border: none;
+      cursor: pointer;
     }
-    .cta a:hover {
+    .cta a:hover, .btn:hover {
       background: #00695c;
     }
     .features {
@@ -69,6 +71,55 @@
       text-align: center;
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
     }
+
+    /* New styles for lower ledge and forms */
+    .lower-ledge {
+      background: #ffffff;
+      border-radius: 12px;
+      max-width: 1000px;
+      margin: 2rem auto;
+      padding: 1.25rem;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+    }
+    .auth-row {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .panels {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      justify-content: center;
+    }
+    .panel {
+      background: #f1f8e9;
+      border-radius: 10px;
+      padding: 1rem;
+      flex: 1 1 320px;
+      min-width: 280px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+    }
+    .panel h3 {
+      margin-top: 0;
+      color: #2e7d32;
+    }
+    .form-field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      margin-bottom: 0.75rem;
+    }
+    input[type="text"], input[type="email"], select, textarea {
+      padding: 0.5rem;
+      border-radius: 6px;
+      border: 1px solid #cfd8dc;
+      font-size: 0.95rem;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    textarea { min-height: 80px; resize: vertical; }
     footer {
       text-align: center;
       padding: 1.2rem;
@@ -94,11 +145,8 @@
       communities, or businesses.<br />
       Visualize your impact, discover trends, and inspire change.
     </p>
-    <div class="cta" id="apply">
-      <a href="#application-form">Apply for Renewable Resources</a>
-      <a href="#status-check">Check Application Status</a>
-    </div>
   </div>
+
   <div class="features" id="features">
     <div class="feature">
       <strong>Live Data Tracking</strong><br />
@@ -116,14 +164,35 @@
       <strong>Insights &amp; Trends</strong><br />
       Access predictive analytics for energy planning.
     </div>
-    <div class="feature">
-      <strong>Consumer-Government Communication</strong><br />
-      Connect directly with local government to report issues, provide feedback,
-      and stay informed on policies.
+  </div>
+
+  <!-- lower ledge: signup/login and compact status button above panels. -->
+  <div class="lower-ledge" id="apply">
+    <div class="auth-row" aria-hidden="false">
+      <button class="btn" onclick="location.href='login.html'">Sign Up</button>
+      <button class="btn" onclick="location.href='login.html'">Log In</button>
+      <!-- compact status button matching signup/login style -->
+      <button class="btn" onclick="checkStatusPrompt()">Check Status</button>
+    </div>
+
+    <div class="panels">
+      <!-- Application form removed from this page. Users must log in and use application.html -->
+      <!-- Status check panel removed — replaced by compact button above -->
     </div>
   </div>
+
   <footer>
     &copy; 2025 Renewable Energy Tracker. Made for a cleaner planet.
   </footer>
+
+  <script>
+    // Minimal client-side hooks — replace with real auth and API calls when ready.
+    function checkStatusPrompt() {
+      var id = prompt('Enter your Application ID (e.g. APP-1234):');
+      if (!id) return;
+      // placeholder: replace with a real status lookup
+      alert('Status for ' + id + ': (placeholder) In review');
+    }
+  </script>
 </body>
 </html>
