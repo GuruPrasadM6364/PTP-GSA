@@ -4,12 +4,13 @@
   <meta charset="UTF-8" />
   <title>Renewable Energy Tracker</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="/static/styles.css" />
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <nav>
     <span style="font-weight: bold; font-size: 1.2rem;">Renewable Energy Tracker</span>
   </nav>
+
   <div class="hero">
     <h1>Empower a Sustainable Future</h1>
     <p>
@@ -21,56 +22,41 @@
 
   <div class="features" id="features">
     <div class="feature">
-      <strong>Live Data Tracking</strong><br />
-      Monitor real-time solar, wind, and hydro energy generation.
+      <button class="btn" onclick="location.href='live-data-tracking.html'">Live Data Tracking</button>
+      <div class="feature-desc">Monitor real-time solar and wind generation.</div>
     </div>
     <div class="feature">
-      <strong>Impact Visualization</strong><br />
-      See your CO₂ savings and environmental effects in one dashboard.
+      <button class="btn" onclick="location.href='impact-visualization.html'">Impact Visualization</button>
+      <div class="feature-desc">See CO₂ savings and environmental effects.</div>
     </div>
     <div class="feature">
-      <strong>Community Comparison</strong><br />
-      Benchmark usage and savings with others nearby.
+      <button class="btn" onclick="location.href='community-comparison.html'">Community Comparison</button>
+      <div class="feature-desc">Benchmark usage and savings with nearby communities.</div>
     </div>
     <div class="feature">
-      <strong>Insights &amp; Trends</strong><br />
-      Access predictive analytics for energy planning.
+      <button class="btn" onclick="location.href='insights-trends.html'">Insights &amp; Trends</button>
+      <div class="feature-desc">Access predictive analytics for energy planning.</div>
     </div>
   </div>
 
   <div class="lower-ledge" id="apply">
     <div class="auth-row" aria-hidden="false">
-      <button class="btn" onclick="location.href='/signup'">Sign Up</button>
-      <button class="btn" onclick="location.href='/login'">Log In</button>
-      <button class="btn" onclick="handleCheckStatus()">Check Status</button>
-      <button class="btn" onclick="location.href='/application'">Submit Application</button>
+      <button class="btn" onclick="location.href='signup.html'">Sign Up</button>
+      <button class="btn" onclick="location.href='login.html'">Log In</button>
+      <button class="btn" onclick="handleCheckStatus();">Check Status</button>
+      <button class="btn" onclick="location.href='application.html'">Submit Application</button>
     </div>
 
     <div class="panels">
+      <!-- reserved for additional panels if needed -->
     </div>
   </div>
 
-  <footer>
-    &copy; 2025 Renewable Energy Tracker. Made for a cleaner planet.
-  </footer>
-
   <script>
     function handleCheckStatus() {
-      if (typeof checkStatusPrompt === 'function') {
-        return checkStatusPrompt();
-      }
       var id = prompt('Enter your Application ID (e.g. APP-1234):');
       if (!id) return;
-      alert('Status for ' + id + ': (placeholder) In review');
-    }
-  </script>
-</body>
-</html>
-      if (typeof checkStatusPrompt === 'function') {
-        return checkStatusPrompt();
-      }
-      var id = prompt('Enter your Application ID (e.g. APP-1234):');
-      if (!id) return;
+      // placeholder: replace with real status lookup
       alert('Status for ' + id + ': (placeholder) In review');
     }
   </script>
