@@ -20,6 +20,7 @@ logging.basicConfig(level=logging.INFO)
 IPAPI_URL = "https://ipapi.co/{ip}/json/"
 IPAPI_NOARG = "https://ipapi.co/json/"
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
+NOMINATIM_REVERSE = "https://nominatim.openstreetmap.org/reverse"
 
 def haversine_km(a_lat, a_lon, b_lat, b_lon):
     R = 6371.0
@@ -43,6 +44,24 @@ def fetch_ip_location(ip):
     except Exception as e:
         logging.warning("ipapi lookup failed: %s", e)
     return None
+
+def reverse_geocode(lat, lon):
+    try:
+        params = {"lat": lat, "lon": lon, "format": "json", "zoom": 10, "addressdetails": 1}
+        headers = {"User-Agent": "PTP-CommunityComparison/1.0 (contact@example.com)"}
+        r = requests.get(NOMINATIM_REVERSE, params=params, headers=headers, timeout=8)
+        r.raise_for_status()
+        j = r.json()
+        addr = j.get("address", {})
+        # prefer city/town/village; fallback to county/state
+        city = addr.get("city") or addr.get("town") or addr.get("village") or addr.get("municipality") or ""
+        region = addr.get("state") or addr.get("county") or ""
+        country = addr.get("country") or ""
+        display = j.get("display_name", "")
+        return {"city": city, "region": region, "country": country, "display_name": display}
+    except Exception as e:
+        logging.warning("reverse geocode failed: %s", e)
+    return {"city": "", "region": "", "country": "", "display_name": ""}
 
 def fetch_open_meteo(lat, lon, start_date, end_date):
     params = {
@@ -70,30 +89,137 @@ def compute_averages(om_json):
         "data_points": len(sr) if sr else 0
     }
 
+# ----------------- new: simple emission-factor and household consumption estimates -----------------
+# These are approximate default values for quick client-side estimates. Replace with a proper dataset/API for production.
+EMISSION_FACTORS = {
+    "US": 0.417,  # kgCO2 / kWh
+    "GB": 0.233,
+    "DE": 0.401,
+    "FR": 0.053,
+    "IN": 0.82,
+    "CN": 0.681,
+    "BR": 0.069,
+    "CA": 0.141,
+    "AU": 0.628
+}
+HOUSEHOLD_ANNUAL_KWH = {
+    "US": 10600,
+    "GB": 3300,
+    "DE": 3500,
+    "FR": 4500,
+    "IN": 1200,
+    "CN": 3000,
+    "BR": 2500,
+    "CA": 11000,
+    "AU": 7000
+}
+GLOBAL_AVG_EMISSION = 0.475
+GLOBAL_AVG_HOUSEHOLD = 3500
+
+@app.route("/api/emissions", methods=["GET"])
+def emissions():
+    # Accept optional lat/lon (client GPS) or use IP detection
+    lat_arg = request.args.get("lat")
+    lon_arg = request.args.get("lon")
+    ip_override = request.args.get("ip")
+    detected = {"ip": None, "city": "", "region": "", "country": "", "country_code": None, "latitude": None, "longitude": None, "source": "ip"}
+
+    if lat_arg and lon_arg:
+        try:
+            lat = float(lat_arg); lon = float(lon_arg)
+        except ValueError:
+            return jsonify({"error": "Invalid lat/lon"}), 400
+        rg = reverse_geocode(lat, lon)
+        detected.update({
+            "ip": ip_override or request.headers.get("X-Forwarded-For", request.remote_addr or ""),
+            "city": rg.get("city","") or rg.get("display_name",""),
+            "region": rg.get("region",""),
+            "country": rg.get("country",""),
+            "country_code": None,
+            "latitude": lat,
+            "longitude": lon,
+            "source": "client_gps_or_manual"
+        })
+    else:
+        ip = ip_override or request.headers.get("X-Forwarded-For", request.remote_addr or "")
+        if "," in ip:
+            ip = ip.split(",")[0].strip()
+        ipapi_resp = fetch_ip_location(None if ip in ("127.0.0.1","::1","localhost","") else ip)
+        if not ipapi_resp:
+            return jsonify({"error":"Failed to resolve location from IP"}), 502
+        lat = ipapi_resp.get("latitude") or ipapi_resp.get("lat")
+        lon = ipapi_resp.get("longitude") or ipapi_resp.get("lon")
+        try:
+            lat = float(lat); lon = float(lon)
+        except Exception:
+            return jsonify({"error":"Location missing coordinates","raw":ipapi_resp}), 502
+        rg = reverse_geocode(lat, lon)
+        detected.update({
+            "ip": ip,
+            "city": rg.get("city") or ipapi_resp.get("city",""),
+            "region": rg.get("region") or ipapi_resp.get("region",""),
+            "country": rg.get("country") or ipapi_resp.get("country_name") or ipapi_resp.get("country",""),
+            "country_code": ipapi_resp.get("country_code") or None,
+            "latitude": lat,
+            "longitude": lon,
+            "source": "ip"
+        })
+
+    # choose emission factor and household consumption based on country code if available
+    cc = (ipapi_resp.get("country_code") if 'ipapi_resp' in locals() else None) or detected.get("country_code")
+    ef = GLOBAL_AVG_EMISSION
+    hh_kwh = GLOBAL_AVG_HOUSEHOLD
+    if cc and isinstance(cc, str):
+        cc = cc.upper()
+        if cc in EMISSION_FACTORS:
+            ef = EMISSION_FACTORS[cc]
+        if cc in HOUSEHOLD_ANNUAL_KWH:
+            hh_kwh = HOUSEHOLD_ANNUAL_KWH[cc]
+    else:
+        # try to match by country name
+        cname = (detected.get("country") or "").upper()
+        for k in EMISSION_FACTORS:
+            if k and k == cname[:2]:
+                ef = EMISSION_FACTORS.get(k, ef)
+
+    est_annual_co2_kg = round(hh_kwh * ef, 1)
+    result = {
+        "detected": detected,
+        "emission_factor_kg_per_kwh": round(ef, 3),
+        "typical_household_annual_kwh": int(hh_kwh),
+        "typical_household_annual_co2_kg": est_annual_co2_kg,
+        "note": "Estimates based on simple country mapping. Replace with official grid-intensity API for production."
+    }
+    return jsonify(result)
+
 @app.route("/api/community", methods=["GET"])
 def community():
-    # allow optional explicit lat/lon override (from client)
+    # optional explicit lat/lon override (from client)
     lat_arg = request.args.get("lat")
     lon_arg = request.args.get("lon")
     ip_override = request.args.get("ip")  # optional ip override for testing
 
-    detected = {"ip": None, "city": "", "region": "", "country": "", "latitude": None, "longitude": None}
+    detected = {"ip": None, "city": "", "region": "", "country": "", "latitude": None, "longitude": None, "source": "ip"}
 
     if lat_arg is not None and lon_arg is not None:
-        # use provided coordinates directly
+        # coordinates provided by client (browser geolocation or manual)
         try:
             lat = float(lat_arg)
             lon = float(lon_arg)
-            detected.update({
-                "ip": ip_override or request.remote_addr,
-                "city": "Manual",
-                "region": "",
-                "country": "",
-                "latitude": lat,
-                "longitude": lon
-            })
         except ValueError:
             return jsonify({"error": "Invalid lat/lon parameters"}), 400
+
+        # reverse-geocode to get human-readable place
+        rg = reverse_geocode(lat, lon)
+        detected.update({
+            "ip": ip_override or request.headers.get("X-Forwarded-For", request.remote_addr or ""),
+            "city": rg.get("city", "") or rg.get("display_name", ""),
+            "region": rg.get("region", ""),
+            "country": rg.get("country", ""),
+            "latitude": lat,
+            "longitude": lon,
+            "source": "client_gps_or_manual"
+        })
     else:
         # resolve location from IP (use ip_override if provided)
         ip = ip_override
@@ -107,7 +233,6 @@ def community():
         if not ipapi_resp:
             return jsonify({"error": "Failed to resolve location from IP"}), 502
 
-        # ipapi may use keys 'latitude'/'longitude' or 'lat'/'lon'
         lat = ipapi_resp.get("latitude") or ipapi_resp.get("lat")
         lon = ipapi_resp.get("longitude") or ipapi_resp.get("lon")
         try:
@@ -116,13 +241,16 @@ def community():
         except Exception:
             return jsonify({"error": "Location response missing coordinates", "raw": ipapi_resp}), 502
 
+        # enrich with reverse geocode (IPAPI provides city/region but reverse is more consistent)
+        rg = reverse_geocode(lat, lon)
         detected.update({
             "ip": ip,
-            "city": ipapi_resp.get("city", ""),
-            "region": ipapi_resp.get("region", ""),
-            "country": ipapi_resp.get("country_name", ipapi_resp.get("country", "")),
+            "city": rg.get("city") or ipapi_resp.get("city", ""),
+            "region": rg.get("region") or ipapi_resp.get("region", ""),
+            "country": rg.get("country") or ipapi_resp.get("country_name", ipapi_resp.get("country", "")),
             "latitude": lat,
-            "longitude": lon
+            "longitude": lon,
+            "source": "ip"
         })
 
     # request last 7 days (end_date = yesterday)
