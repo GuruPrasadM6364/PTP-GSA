@@ -1,101 +1,542 @@
-"""Renewable helpers: fetch Open-Meteo daily irradiance and estimate simple PV yield.
-Kept CLI / validation helpers from previous file.
+"""Simple CLI to manage the renewable DB.
+
+Commands:
+  init-db    : create database and tables
+  seed       : seed sample data
+  list-regions: list regions
+  list-projects: list projects
+  serve      : run web server to view landing page
+  collect-user-info: collect user information interactively
+
+This file uses the ORM in `models.py` and the helper in `db_init.py`.
 """
-import logging
-import re
 import argparse
+from flask import Flask, render_template_string, request, jsonify, send_from_directory
+from sqlalchemy import create_engine # type: ignore
+from sqlalchemy.orm import Session # pyright: ignore[reportMissingImports]
+from models import Region, Project, CarbonMetric, Measurement, Target, Report, Base, User, Application
+import db_init
+import os
+import re
+from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
-try:
-    import requests
-except Exception:
-    requests = None
 
-logging.basicConfig(level=logging.INFO)
 
-# --- simple validation / CLI utilities (kept) ---
+def get_ai_suggestion(units, co2):
+    """AI suggestion system for energy-saving tips based on usage and emissions."""
+    if units <= 50:
+        return "🌿 Excellent! Your consumption is very low. Keep it up by continuing to use efficient LED bulbs and solar charging devices."
+    elif units <= 150:
+        return "⚙️ Moderate consumption detected. Consider unplugging idle electronics and using smart power strips to reduce standby losses."
+    elif units <= 300:
+        return "⚡ Your electricity usage is on the higher side. Try scheduling high-power tasks during off-peak hours, and switch to inverter-based appliances."
+    elif units <= 600:
+        return "🔥 Heavy usage! You might benefit from a partial solar panel setup to offset your grid use. Monitor your cooling/heating appliances — they're often major contributors."
+    else:
+        return "🚨 Very high energy usage detected! Consider a full renewable energy plan or energy audit. Switching to solar or wind power could reduce over 70% of your CO₂ emissions."
+
+
+def calculate_savings_data(months_data):
+    """Calculate carbon and cost savings from renewable energy."""
+    emission_factor = 0.85  # kg CO₂ per kWh (grid)
+    renewable_factor = 0.05  # kg CO₂ per kWh (renewable)
+    cost_per_unit = 7.0  # ₹7 per kWh
+    renewable_cost_per_unit = 2.5  # ₹2.5 per kWh (renewable)
+    
+    results = []
+    total_grid_co2 = 0
+    total_renewable_co2 = 0
+    total_grid_cost = 0
+    total_renewable_cost = 0
+    
+    for month_name, units in months_data:
+        grid_co2 = units * emission_factor
+        renewable_co2 = units * renewable_factor
+        grid_cost = units * cost_per_unit
+        renewable_cost = units * renewable_cost_per_unit
+        
+        total_grid_co2 += grid_co2
+        total_renewable_co2 += renewable_co2
+        total_grid_cost += grid_cost
+        total_renewable_cost += renewable_cost
+        
+        results.append({
+            'month': month_name,
+            'units': units,
+            'grid_co2': grid_co2,
+            'renewable_co2': renewable_co2,
+            'grid_cost': grid_cost,
+            'renewable_cost': renewable_cost
+        })
+    
+    return {
+        'data': results,
+        'total_co2_saving': total_grid_co2 - total_renewable_co2,
+        'total_cost_saving': total_grid_cost - total_renewable_cost
+    }
+
+
 def validate_phone(phone):
+    """Validate 10-digit phone number"""
     pattern = r'^[6-9]\d{9}$'
     return bool(re.match(pattern, phone))
 
+
 def validate_pincode(pincode):
+    """Validate 6-digit pincode"""
     pattern = r'^\d{6}$'
     return bool(re.match(pattern, pincode))
 
+
 def validate_email(email):
+    """Validate email address"""
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return bool(re.match(pattern, email))
 
-# --- PV prediction helpers (restored) ---
-OPEN_METEO_DAILY = "https://api.open-meteo.com/v1/forecast"
 
-# assumptions
-PANEL_EFFICIENCY = 0.18
-AREA_PER_KW = 6.0
-PERFORMANCE_RATIO = 0.75
+def validate_password(password):
+    """Validate password (min 8 chars, at least 1 uppercase, 1 lowercase, 1 digit, 1 special char)"""
+    if len(password) < 8:
+        return False, "Password must be at least 8 characters long."
+    if not re.search(r'[A-Z]', password):
+        return False, "Password must contain at least one uppercase letter."
+    if not re.search(r'[a-z]', password):
+        return False, "Password must contain at least one lowercase letter."
+    if not re.search(r'\d', password):
+        return False, "Password must contain at least one digit."
+    if not re.search(r'[!@#$%^&*(),.?\":{}|<>]', password):
+        return False, "Password must contain at least one special character."
+    return True, "Valid password"
 
-def fetch_daily_irradiance(lat, lon, start_date, end_date, timezone="UTC"):
-    if requests is None:
-        raise RuntimeError("requests not installed")
-    params = {
-        "latitude": lat,
-        "longitude": lon,
-        "daily": "shortwave_radiation_sum",
-        "start_date": start_date,
-        "end_date": end_date,
-        "timezone": timezone
+
+def get_user_info():
+    """Collect user information with validation"""
+    print("=" * 50)
+    print("USER INFORMATION FORM")
+    print("=" * 50)
+    
+    # Collect Name
+    while True:
+        name = input("\nEnter Full Name: ").strip()
+        if name:
+            break
+        print("❌ Name cannot be empty. Please try again.")
+    
+    # Collect Phone Number
+    while True:
+        phone = input("Enter Phone Number (10 digits): ").strip()
+        if validate_phone(phone):
+            break
+        print("❌ Invalid phone number. Please enter a valid 10-digit number starting with 6-9.")
+    
+    # Collect Email
+    while True:
+        email = input("Enter Email Address: ").strip()
+        if validate_email(email):
+            break
+        print("❌ Invalid email address. Please enter a valid email (e.g., user@example.com).")
+
+    # Collect Password
+    while True:
+        password = input("Enter Password (min 8 chars, 1 uppercase, 1 lowercase, 1 digit, 1 special char): ").strip()
+        is_valid, message = validate_password(password)
+        if is_valid:
+            break
+        print(f"❌ {message}")
+    
+    # Collect Pincode
+    while True:
+        pincode = input("Enter Pincode (6 digits): ").strip()
+        if validate_pincode(pincode):
+            break
+        print("❌ Invalid pincode. Please enter a valid 6-digit pincode.")
+    
+    # Collect Address
+    while True:
+        address = input("Enter Address: ").strip()
+        if address:
+            break
+        print("❌ Address cannot be empty. Please try again.")
+    
+    # Store user data
+    user_data = {
+        'name': name,
+        'phone': phone,
+        'email': email,
+        'pincode': pincode,
+        'address': address,
+        'password': password,
     }
-    r = requests.get(OPEN_METEO_DAILY, params=params, timeout=15)
-    r.raise_for_status()
-    return r.json()
+    
+    return user_data
 
-def estimate_pv_yield_from_irradiance(irradiance_wh_m2):
-    if irradiance_wh_m2 is None:
-        return None
-    kwh_per_kw = (irradiance_wh_m2 / 1000.0) * (PANEL_EFFICIENCY * AREA_PER_KW) * PERFORMANCE_RATIO
-    return kwh_per_kw
 
-def predict_generation(lat, lon, start_date, end_date):
-    """
-    Returns daily list with irradiance and estimated kWh per kW.
-    """
-    if requests is None:
-        raise RuntimeError("requests not installed")
-    om = fetch_daily_irradiance(lat, lon, start_date, end_date)
-    daily = []
-    dates = om.get("daily", {}).get("time", []) or []
-    irr_list = om.get("daily", {}).get("shortwave_radiation_sum", []) or []
-    total = 0.0
-    count = 0
-    for i, dt in enumerate(dates):
-        irr = None
+def display_user_info(user_data):
+    """Display collected user information"""
+    print("\n" + "=" * 50)
+    print("COLLECTED INFORMATION")
+    print("=" * 50)
+    print(f"Name:     {user_data['name']}")
+    print(f"Phone:    {user_data['phone']}")
+    print(f"Email:    {user_data.get('email', '')}")
+    print(f"Pincode:  {user_data['pincode']}")
+    print(f"Address:  {user_data['address']}")
+    print(f"Password: {'*' * len(user_data['password'])}")
+    print("=" * 50)
+
+
+DB_URL = "sqlite:///renewable.db"
+
+# Initialize Flask app
+app = Flask(__name__)
+
+# Configure static files
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    """Serve static files from the static directory."""
+    static_dir = os.path.join(os.path.dirname(__file__), 'static')
+    return send_from_directory(static_dir, filename)
+
+
+def load_html_template():
+    """Load the landing.html file."""
+    html_path = os.path.join(os.path.dirname(__file__), 'landing.html')
+    if os.path.exists(html_path):
+        with open(html_path, 'r', encoding='utf-8') as f:
+            return f.read()
+    return "<h1>Landing page not found</h1>"
+
+
+@app.route('/')
+def index():
+    """Serve the landing page."""
+    html_content = load_html_template()
+    return html_content
+
+
+@app.route('/login')
+def login_page():
+    """Serve the login / user-info HTML page."""
+    html_path = os.path.join(os.path.dirname(__file__), 'login.html')
+    if os.path.exists(html_path):
+        with open(html_path, 'r', encoding='utf-8') as f:
+            return f.read()
+    return "<h1>Login page not found</h1>"
+
+
+@app.route('/signup')
+def signup_page():
+    """Serve the signup HTML page."""
+    html_path = os.path.join(os.path.dirname(__file__), 'signup.html')
+    if os.path.exists(html_path):
+        with open(html_path, 'r', encoding='utf-8') as f:
+            return f.read()
+    return "<h1>Signup page not found</h1>"
+
+
+@app.route('/application')
+def application_page():
+    """Serve the application form HTML page."""
+    html_path = os.path.join(os.path.dirname(__file__), 'application.html')
+    if os.path.exists(html_path):
+        with open(html_path, 'r', encoding='utf-8') as f:
+            return f.read()
+    return "<h1>Application form not found</h1>"
+
+
+@app.route('/live-data-tracking.html')
+def live_data_tracking_page():
+    """Serve live data tracking page."""
+    html_path = os.path.join(os.path.dirname(__file__), 'live-data-tracking.html')
+    if os.path.exists(html_path):
+        with open(html_path, 'r', encoding='utf-8') as f:
+            return f.read()
+    return "<h1>Live Data Tracking page not found</h1>"
+
+
+@app.route('/carbon-calculator')
+def carbon_calculator_page():
+    """Serve the carbon calculator page."""
+    html_path = os.path.join(os.path.dirname(__file__), 'carbon_calculator.html')
+    if os.path.exists(html_path):
+        with open(html_path, 'r', encoding='utf-8') as f:
+            return f.read()
+    return "<h1>Carbon Calculator page not found</h1>"
+
+
+@app.route('/impact-visualization.html')
+def impact_visualization_page():
+    """Serve the impact visualization page."""
+    html_path = os.path.join(os.path.dirname(__file__), 'impact-visualization.html')
+    if os.path.exists(html_path):
+        with open(html_path, 'r', encoding='utf-8') as f:
+            return f.read()
+    return "<h1>Impact Visualization page not found</h1>"
+
+
+@app.route('/community-comparison.html')
+def community_comparison_page():
+    """Serve community comparison page."""
+    html_path = os.path.join(os.path.dirname(__file__), 'community-comparison.html')
+    if os.path.exists(html_path):
+        with open(html_path, 'r', encoding='utf-8') as f:
+            return f.read()
+    return "<h1>Community Comparison page not found</h1>"
+
+
+@app.route('/insights-trends.html')
+def insights_trends_page():
+    """Serve insights and trends page."""
+    html_path = os.path.join(os.path.dirname(__file__), 'insights-trends.html')
+    if os.path.exists(html_path):
+        with open(html_path, 'r', encoding='utf-8') as f:
+            return f.read()
+    return "<h1>Insights & Trends page not found</h1>"
+
+
+@app.route('/api/regions')
+def api_regions():
+    """API endpoint to get all regions."""
+    engine = create_engine(DB_URL, future=True)
+    with Session(engine) as session:
+        rows = session.query(Region).order_by(Region.region_type, Region.name).all()
+        return jsonify([{'id': r.id, 'name': r.name, 'type': r.region_type} for r in rows])
+
+
+@app.route('/api/projects')
+def api_projects():
+    """API endpoint to get all projects."""
+    engine = create_engine(DB_URL, future=True)
+    with Session(engine) as session:
+        rows = session.query(Project).order_by(Project.name).all()
+        return jsonify([{'id': p.id, 'name': p.name} for p in rows])
+
+
+@app.route('/api/users', methods=['GET'])
+def api_get_users():
+    """API endpoint to get all users."""
+    engine = create_engine(DB_URL, future=True)
+    with Session(engine) as session:
+        rows = session.query(User).order_by(User.id).all()
+        return jsonify([{
+            'id': u.id,
+            'name': u.name,
+            'phone': u.phone,
+            'pincode': u.pincode,
+            'address': u.address,
+            'created_at': u.created_at.isoformat()
+        } for u in rows])
+
+
+@app.route('/api/auth/login', methods=['POST'])
+def api_login():
+    """API endpoint for user login with email or phone."""
+    try:
+        data = request.get_json()
+        
+        # Validate required fields
+        if not all(key in data for key in ['identifier', 'password', 'login_method']):
+            return jsonify({'error': 'Missing required fields'}), 400
+        
+        identifier = data.get('identifier', '').strip()
+        password = data.get('password', '')
+        login_method = data.get('login_method')
+
+        if login_method not in ['email', 'phone']:
+            return jsonify({'error': 'Invalid login method'}), 400
+
+        if not identifier or not password:
+            return jsonify({'error': 'Identifier and password are required'}), 400
+
+        # Validate identifier format
+        if login_method == 'email':
+            if not validate_email(identifier):
+                return jsonify({'error': 'Invalid email format'}), 400
+        elif login_method == 'phone':
+            if not validate_phone(identifier):
+                return jsonify({'error': 'Invalid phone format'}), 400
+
+        # Find user by email or phone
+        engine = create_engine(DB_URL, future=True)
+        with Session(engine) as session:
+            if login_method == 'email':
+                user = session.query(User).filter(User.email == identifier).first()
+                if not user:
+                    return jsonify({'error': 'User not found with this email'}), 401
+            else:  # phone
+                user = session.query(User).filter(User.phone == identifier).first()
+                if not user:
+                    return jsonify({'error': 'User not found with this phone number'}), 401
+
+            # Verify password
+            if not user.password_hash or not check_password_hash(user.password_hash, password):
+                return jsonify({'error': 'Invalid password'}), 401
+
+            # Successful login
+            return jsonify({
+                'success': True,
+                'message': f'Login successful! Welcome, {user.name}',
+                'user_id': user.id,
+                'user_name': user.name,
+                'user_email': user.email,
+                'user_phone': user.phone
+            }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/users', methods=['POST'])
+def api_submit_user():
+    """API endpoint to submit user information."""
+    try:
+        data = request.get_json()
+        
+        # Validate required fields
+        if not all(key in data for key in ['name', 'phone', 'pincode', 'address']):
+            return jsonify({'error': 'Missing required fields'}), 400
+        
+        # Validate phone and pincode
+        if not validate_phone(data['phone']):
+            return jsonify({'error': 'Invalid phone number format'}), 400
+        
+        if not validate_pincode(data['pincode']):
+            return jsonify({'error': 'Invalid pincode format'}), 400
+
+        # Optional: validate email and password if provided
+        email = data.get('email')
+        password = data.get('password')
+        if email and not validate_email(email):
+            return jsonify({'error': 'Invalid email format'}), 400
+        if password:
+            ok, msg = validate_password(password)
+            if not ok:
+                return jsonify({'error': f'Password invalid: {msg}'}), 400
+        
+        # Save to database
+        engine = create_engine(DB_URL, future=True)
+        with Session(engine) as session:
+            user = User(
+                name=data['name'],
+                phone=data['phone'],
+                email=email,
+                password_hash=generate_password_hash(password) if password else None,
+                pincode=data['pincode'],
+                address=data['address']
+            )
+            session.add(user)
+            session.commit()
+            return jsonify({
+                'success': True,
+                'message': 'User information saved successfully',
+                'user_id': user.id
+            }), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/applications', methods=['POST'])
+def api_submit_application():
+    """API endpoint to submit an application."""
+    try:
+        data = request.get_json()
+        
+        # Validate required fields
+        if not all(key in data for key in ['name', 'phone', 'pincode', 'email', 'source']):
+            return jsonify({'error': 'Missing required fields'}), 400
+        
+        # Validate fields
+        if not validate_phone(data['phone']):
+            return jsonify({'error': 'Invalid phone number format'}), 400
+        
+        if not validate_pincode(data['pincode']):
+            return jsonify({'error': 'Invalid pincode format'}), 400
+        
+        if not validate_email(data['email']):
+            return jsonify({'error': 'Invalid email format'}), 400
+        
+        source = data['source']
+        if source not in ['Solar', 'Wind', 'Hydro']:
+            return jsonify({'error': 'Invalid renewable source'}), 400
+        
+        # Save to database
+        engine = create_engine(DB_URL, future=True)
+        with Session(engine) as session:
+            application = Application(
+                name=data['name'],
+                phone=data['phone'],
+                pincode=data['pincode'],
+                email=data['email'],
+                source=source
+            )
+            session.add(application)
+            session.commit()
+            return jsonify({
+                'success': True,
+                'message': 'Application submitted successfully!',
+                'application_id': application.id
+            }), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+def list_regions(engine_url: str = DB_URL) -> None:
+    engine = create_engine(engine_url, future=True)
+    with Session(engine) as session:
+        rows = session.query(Region).order_by(Region.region_type, Region.name).all()
+        for r in rows:
+            print(r)
+
+
+def list_projects(engine_url: str = DB_URL) -> None:
+    engine = create_engine(engine_url, future=True)
+    with Session(engine) as session:
+        rows = session.query(Project).order_by(Project.name).all()
+        for p in rows:
+            print(p)
+
+
+def main():
+
+    parser = argparse.ArgumentParser(description="Manage renewable database")
+    parser.add_argument(
+        "command",
+        choices=["init-db", "seed", "list-regions", "list-projects", "serve", "collect-user-info"],
+        help="command to run",
+    )
+    args = parser.parse_args()
+
+    if args.command == "init-db":
+        db_init.init_db(DB_URL)
+    elif args.command == "seed":
+        db_init.seed_sample(DB_URL)
+    elif args.command == "list-regions":
+        list_regions(DB_URL)
+    elif args.command == "list-projects":
+        list_projects(DB_URL)
+    elif args.command == "serve":
+        print("Starting web server at http://localhost:5000")
+        app.run(debug=True, host='0.0.0.0', port=5000)
+    elif args.command == "collect-user-info":
+        user_info = get_user_info()
+        display_user_info(user_info)
         try:
-            irr = float(irr_list[i])
-        except Exception:
-            irr = None
-        kwh = estimate_pv_yield_from_irradiance(irr) if irr is not None else None
-        if kwh is not None:
-            total += kwh
-            count += 1
-        daily.append({"date": dt, "irradiance_wh_m2": irr, "kwh_per_kw": round(kwh,3) if kwh is not None else None})
-    avg = round(total / count, 3) if count else None
-    return {"daily": daily, "average_kwh_per_kw_per_day": avg, "total_kwh_per_kw": round(total,3) if count else None}
+            engine = create_engine(DB_URL, future=True)
+            with Session(engine) as session:
+                user = User(
+                    name=user_info['name'],
+                    phone=user_info['phone'],
+                    email=user_info.get('email'),
+                    password_hash=generate_password_hash(user_info['password']) if user_info.get('password') else None,
+                    pincode=user_info['pincode'],
+                    address=user_info['address'],
+                )
+                session.add(user)
+                session.commit()
+                print(f"\n✅ User information saved to database with ID: {user.id}")
+        except Exception as e:
+            print(f"\n❌ Error saving to database: {str(e)}")
 
-# --- CLI wrapper to call predictive.run_prediction when needed (kept lightweight) ---
-try:
-    from predictive import run_prediction
-except Exception:
-    run_prediction = None
-
-def cmd_predict(lat, lon, days=7):
-    if run_prediction is None:
-        raise RuntimeError("predictive.run_prediction not available")
-    return run_prediction(lat, lon, days=days)
 
 if __name__ == "__main__":
-    p = argparse.ArgumentParser()
-    p.add_argument("--lat", type=float, required=True)
-    p.add_argument("--lon", type=float, required=True)
-    p.add_argument("--days", type=int, default=7)
-    args = p.parse_args()
-    print(cmd_predict(args.lat, args.lon, args.days))
+    main()
 
